@@ -1,0 +1,36 @@
+name: Deploy (FTP)
+
+on:
+  workflow_dispatch:
+  # Uncomment below to auto-deploy on push to main
+  # push:
+  #   branches: [ main ]
+
+jobs:
+  build-and-deploy:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET 8 SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+
+    - name: Restore NuGet packages
+      run: dotnet restore CustomWebTools.sln
+
+    - name: Build and Publish
+      run: dotnet publish CustomWebTools.sln -c Release -o ./_build --no-restore
+
+    - name: Deploy via FTP
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+      with:
+        server: win8123.site4now.net
+        username: tools_shahrukh
+        password: Axact123
+        local-dir: ./_build/
+        server-dir: ./
+        dangerous-clean-slate: false
