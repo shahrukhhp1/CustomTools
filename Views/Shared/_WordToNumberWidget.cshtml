@@ -1,0 +1,331 @@
+@model string?
+
+@{
+    var title = string.IsNullOrWhiteSpace(Model) ? "Word to number" : Model!;
+}
+
+<style>
+    .wtn-page {
+        padding: 16px;
+    }
+
+    .wtn-page h1 {
+        text-align: center;
+        margin: 0 0 12px 0;
+    }
+
+    .wtn-controls {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin: 0 0 16px 0;
+        flex-wrap: wrap;
+    }
+
+    .wtn-mode {
+        display: flex;
+        justify-content: center;
+        gap: 14px;
+        margin: 0 0 12px 0;
+        flex-wrap: wrap;
+        font-weight: 600;
+    }
+
+    .wtn-mode label {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    #wtnInput {
+        width: 100%;
+        height: 30vh;
+        min-height: 160px;
+        box-sizing: border-box;
+        padding: 12px;
+    }
+
+    #wtnOutputWrap {
+        margin-top: 12px;
+    }
+
+    #wtnOutput {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 12px;
+        background: #f8f9fa;
+        border: 1px solid #ced4da;
+        border-radius: 6px;
+        min-height: 44px;
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-weight: 600;
+    }
+
+    #wtnError {
+        margin-top: 8px;
+        color: #b02a37;
+        font-weight: 600;
+        display: none;
+    }
+</style>
+
+<script>
+    function numberToWords(num) {
+        if (!Number.isFinite(num)) return { ok: false, error: "Invalid number." };
+
+        const sign = num < 0 ? "minus " : "";
+        const abs = Math.abs(num);
+
+        // Keep decimal digits as typed-ish (avoid scientific notation)
+        const asString = abs.toString();
+        const parts = asString.split(".");
+        const intPart = parts[0];
+        const decPart = parts.length > 1 ? parts[1] : "";
+
+        function under1000(n) {
+            const ones = ["zero","one","two","three","four","five","six","seven","eight","nine"];
+            const teens = ["ten","eleven","twelve","thirteen","fourteen","fifteen","sixteen","seventeen","eighteen","nineteen"];
+            const tens = ["","","twenty","thirty","forty","fifty","sixty","seventy","eighty","ninety"];
+
+            let out = [];
+            const h = Math.floor(n / 100);
+            const r = n % 100;
+            if (h > 0) out.push(ones[h] + " hundred");
+            if (r > 0) {
+                if (r < 10) out.push(ones[r]);
+                else if (r < 20) out.push(teens[r - 10]);
+                else {
+                    const t = Math.floor(r / 10);
+                    const u = r % 10;
+                    out.push(u ? (tens[t] + " " + ones[u]) : tens[t]);
+                }
+            }
+            if (out.length === 0) return "zero";
+            return out.join(" ");
+        }
+
+        function intToWords(intStr) {
+            // up to 15 digits (trillion range) safely in JS number without losing words correctness
+            if (intStr.length > 15) return { ok: false, error: "Number too large (max ~trillions)." };
+            const n = Number(intStr);
+            if (!Number.isSafeInteger(n)) return { ok: false, error: "Number too large (unsafe integer)." };
+            if (n === 0) return { ok: true, words: "zero" };
+
+            const scales = [
+                { value: 1_000_000_000_000, name: "trillion" },
+                { value: 1_000_000_000, name: "billion" },
+                { value: 1_000_000, name: "million" },
+                { value: 1_000, name: "thousand" }
+            ];
+
+            let remaining = n;
+            let out = [];
+            for (const s of scales) {
+                if (remaining >= s.value) {
+                    const chunk = Math.floor(remaining / s.value);
+                    remaining = remaining % s.value;
+                    out.push(under1000(chunk) + " " + s.name);
+                }
+            }
+            if (remaining > 0) out.push(under1000(remaining));
+            return { ok: true, words: out.join(" ") };
+        }
+
+        const intWordsRes = intToWords(intPart);
+        if (!intWordsRes.ok) return intWordsRes;
+
+        let out = sign + intWordsRes.words;
+        if (decPart) {
+            const digitWords = ["zero","one","two","three","four","five","six","seven","eight","nine"];
+            const decWords = decPart.split("").map(d => digitWords[Number(d)]).join(" ");
+            out += " point " + decWords;
+        }
+        return { ok: true, words: out.trim() };
+    }
+
+    function wordToNumberParse(input) {
+        const raw = (input ?? "").toString().trim();
+        if (!raw) return { ok: true, value: 0 };
+
+        // allow direct numeric input
+        const direct = Number(raw.replace(/,/g, ""));
+        if (!Number.isNaN(direct) && raw.match(/^[+-]?[\d,\s]+(\.\d+)?$/)) {
+            return { ok: true, value: direct };
+        }
+
+        const units = {
+            "zero": 0, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9,
+            "ten": 10, "eleven": 11, "twelve": 12, "thirteen": 13, "fourteen": 14, "fifteen": 15, "sixteen": 16, "seventeen": 17, "eighteen": 18, "nineteen": 19
+        };
+        const tens = {
+            "twenty": 20, "thirty": 30, "forty": 40, "fifty": 50, "sixty": 60, "seventy": 70, "eighty": 80, "ninety": 90
+        };
+        const scales = {
+            "thousand": 1_000,
+            "million": 1_000_000,
+            "billion": 1_000_000_000,
+            "trillion": 1_000_000_000_000
+        };
+
+        const normalized = raw
+            .toLowerCase()
+            .replace(/,/g, " ")
+            .replace(/-/g, " ")
+            .replace(/\s+/g, " ")
+            .trim();
+
+        const tokens = normalized.split(" ").filter(Boolean);
+
+        let sign = 1;
+        let total = 0;
+        let current = 0;
+        let inDecimal = false;
+        let decimalDigits = "";
+
+        for (let i = 0; i < tokens.length; i++) {
+            const t = tokens[i];
+            if (t === "and") continue;
+
+            if (t === "minus" || t === "negative") {
+                if (i !== 0) return { ok: false, error: "Unexpected 'negative/minus' position." };
+                sign = -1;
+                continue;
+            }
+
+            if (t === "point" || t === "dot") {
+                inDecimal = true;
+                continue;
+            }
+
+            if (inDecimal) {
+                if (units.hasOwnProperty(t)) {
+                    decimalDigits += String(units[t]);
+                    continue;
+                }
+                if (t.match(/^\d+$/)) {
+                    decimalDigits += t;
+                    continue;
+                }
+                return { ok: false, error: "Invalid decimal part token: " + t };
+            }
+
+            if (units.hasOwnProperty(t)) {
+                current += units[t];
+                continue;
+            }
+            if (tens.hasOwnProperty(t)) {
+                current += tens[t];
+                continue;
+            }
+            if (t === "hundred") {
+                if (current === 0) current = 1;
+                current *= 100;
+                continue;
+            }
+            if (scales.hasOwnProperty(t)) {
+                const scale = scales[t];
+                if (current === 0) current = 1;
+                total += current * scale;
+                current = 0;
+                continue;
+            }
+
+            return { ok: false, error: "Unknown token: " + t };
+        }
+
+        let value = sign * (total + current);
+        if (decimalDigits.length) {
+            value = sign * (Math.abs(total + current) + Number("0." + decimalDigits));
+        }
+
+        return { ok: true, value: value };
+    }
+
+    function wtnConvert() {
+        const input = document.getElementById("wtnInput")?.value ?? "";
+        const output = document.getElementById("wtnOutput");
+        const err = document.getElementById("wtnError");
+        if (!output || !err) return;
+
+        const mode = document.querySelector("input[name='wtnMode']:checked")?.value || "w2n";
+
+        if (mode === "n2w") {
+            const num = Number((input ?? "").toString().trim().replace(/,/g, ""));
+            const res = numberToWords(num);
+            if (!res.ok) {
+                err.style.display = "block";
+                err.textContent = res.error || "Unable to convert.";
+                output.textContent = "";
+                return;
+            }
+            err.style.display = "none";
+            err.textContent = "";
+            output.textContent = res.words;
+            return;
+        }
+
+        const res = wordToNumberParse(input);
+        if (!res.ok) {
+            err.style.display = "block";
+            err.textContent = res.error || "Unable to parse.";
+            output.textContent = "";
+            return;
+        }
+
+        err.style.display = "none";
+        err.textContent = "";
+        output.textContent = String(res.value);
+    }
+
+    function wtnClear() {
+        const input = document.getElementById("wtnInput");
+        if (input) input.value = "";
+        wtnConvert();
+        document.getElementById("wtnInput")?.focus();
+    }
+
+    function wtnCopy() {
+        const text = document.getElementById("wtnOutput")?.textContent ?? "";
+        if (!text) return;
+        if (navigator.clipboard?.writeText) {
+            navigator.clipboard.writeText(text);
+        }
+    }
+</script>
+
+<div class="wtn-page">
+    <h1>@title</h1>
+
+    <div class="wtn-mode">
+        <label>
+            <input type="radio" name="wtnMode" value="w2n" checked onchange="wtnConvert()" />
+            Word → Number
+        </label>
+        <label>
+            <input type="radio" name="wtnMode" value="n2w" onchange="wtnConvert()" />
+            Number → Word
+        </label>
+    </div>
+
+    <div class="wtn-controls">
+        <button type="button" class="btn btn-primary" onclick="wtnConvert()">Convert</button>
+        <button type="button" class="btn btn-secondary" onclick="wtnClear()">Clear</button>
+        <button type="button" class="btn btn-outline-secondary" onclick="wtnCopy()">Copy result</button>
+    </div>
+
+    <textarea id="wtnInput" placeholder="Word → Number: one hundred twenty three&#10;Number → Word: 12345&#10;Supports: minus/negative, point/decimals" oninput="wtnConvert()"></textarea>
+
+    <div id="wtnOutputWrap">
+        <div id="wtnOutput"></div>
+        <div id="wtnError"></div>
+    </div>
+</div>
+
+<script>
+    // Initialize output on first render
+    wtnConvert();
+</script>
+

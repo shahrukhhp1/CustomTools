@@ -1,0 +1,174 @@
+@model string?
+
+@{
+    var title = string.IsNullOrWhiteSpace(Model) ? "String or text comparison" : Model!;
+}
+
+<style>
+    .compare-page {
+        padding: 16px;
+    }
+
+    .compare-page h1 {
+        text-align: center;
+        margin: 0 0 12px 0;
+    }
+
+    .controls {
+        display: flex;
+        justify-content: center;
+        margin: 0 0 16px 0;
+    }
+
+    .inputs {
+        display: flex;
+        justify-content: space-between;
+        gap: 5%;
+        align-items: stretch;
+    }
+
+    .inputs textarea {
+        width: 50%;
+        height: 40vh;
+        min-height: 200px;
+        box-sizing: border-box;
+        padding: 12px;
+    }
+
+    #result {
+        margin-top: 16px;
+        word-break: break-word;
+        white-space: pre-wrap;
+    }
+
+    #matchStatus {
+        margin-top: 8px;
+        font-weight: 600;
+    }
+
+    .allMatched {
+        display: inline-block;
+        padding: 6px 10px;
+        border-radius: 8px;
+        background-color: #198754;
+        color: #fff;
+    }
+
+    .redback {
+        background-color: red;
+        color: white;
+        display: inline-block;
+    }
+
+    .greenback {
+        background-color: green;
+        color: white;
+        display: inline-block;
+    }
+</style>
+
+@Html.AntiForgeryToken()
+
+<script>
+    function animateScrollTo(targetY, durationMs) {
+        const prefersReducedMotion =
+            window.matchMedia &&
+            window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+        if (prefersReducedMotion) {
+            window.scrollTo(0, targetY);
+            return;
+        }
+
+        const startY = window.pageYOffset;
+        const delta = targetY - startY;
+        const start = performance.now();
+
+        function easeInOutCubic(t) {
+            return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+        }
+
+        function step(now) {
+            const t = Math.min(1, (now - start) / durationMs);
+            const eased = easeInOutCubic(t);
+            window.scrollTo(0, Math.round(startY + delta * eased));
+            if (t < 1) requestAnimationFrame(step);
+        }
+
+        requestAnimationFrame(step);
+    }
+
+    async function compareTexts() {
+        const text1 = document.getElementById("text1").value;
+        const text2 = document.getElementById("text2").value;
+        const resultArea = $("#result");
+        const matchStatus = $("#matchStatus");
+        matchStatus.empty();
+        resultArea.html("Comparing...");
+
+        const token = document.querySelector("input[name='__RequestVerificationToken']")?.value;
+        const form = new URLSearchParams();
+        form.set("text1", text1);
+        form.set("text2", text2);
+
+        const resp = await fetch("/Home/Compare", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+                "RequestVerificationToken": token || ""
+            },
+            body: form.toString()
+        });
+
+        if (!resp.ok) {
+            resultArea.text("Compare failed (" + resp.status + ")");
+            return;
+        }
+
+        const html = await resp.text();
+        resultArea.html(html);
+
+        const firstRed = resultArea[0]?.querySelector?.(".redback");
+        if (firstRed) {
+            const y =
+                firstRed.getBoundingClientRect().top +
+                window.pageYOffset -
+                Math.floor(window.innerHeight / 2);
+
+            animateScrollTo(Math.max(0, y), 650);
+
+            // brief pulse so it's easy to spot
+            if (firstRed.animate) {
+                firstRed.animate(
+                    [
+                        { boxShadow: "0 0 0 0 rgba(255,0,0,0.0)", outline: "0px solid rgba(255,0,0,0.0)", transform: "scale(1)" },
+                        { boxShadow: "0 0 0 14px rgba(255,0,0,0.25)", outline: "10px solid rgba(255,0,0,0.9)", transform: "scale(1.35)" },
+                        { boxShadow: "0 0 0 0 rgba(255,0,0,0.0)", outline: "0px solid rgba(255,0,0,0.0)", transform: "scale(1)" }
+                    ],
+                    { duration: 1100, iterations: 2, easing: "ease-in-out" }
+                );
+            }
+        } else {
+            matchStatus.html("<span class='allMatched'>All matched</span>");
+        }
+    }
+</script>
+
+<div class="compare-page">
+    <h1>@title</h1>
+
+    <div class="controls">
+        <button id="compare" onclick="compareTexts()">Compare</button>
+    </div>
+
+    <div class="inputs">
+        <textarea id="text1" placeholder="Enter text 1"></textarea>
+        <textarea id="text2" placeholder="Enter text 2"></textarea>
+    </div>
+
+    <div id="matchStatus"></div>
+    <div id="result"></div>
+
+  
+</div>
+
