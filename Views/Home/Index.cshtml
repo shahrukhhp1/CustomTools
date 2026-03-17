@@ -5,6 +5,12 @@
     <button id="showCompareWidget" type="button" class="btn btn-outline-primary me-2">
         Comparison tool
     </button>
+    <button id="showSimilarityWidget" type="button" class="btn btn-outline-primary me-2">
+        Similarity score
+    </button>
+    <button id="showJsonViewerWidget" type="button" class="btn btn-outline-primary me-2">
+        JSON viewer
+    </button>
     <button id="showCharCountWidget" type="button" class="btn btn-outline-primary me-2">
         Character count
     </button>
@@ -15,6 +21,14 @@
 
 <div id="compareWidgetHost" style="display:none;">
     @await Html.PartialAsync("_TextCompareWidget", (ViewData["Title"] as string) ?? "String or text comparison")
+</div>
+
+<div id="similarityWidgetHost" style="display:none;">
+    @await Html.PartialAsync("_TextSimilarityWidget", "Text similarity")
+</div>
+
+<div id="jsonViewerWidgetHost" style="display:none;">
+    @await Html.PartialAsync("_JsonViewerWidget", "JSON viewer")
 </div>
 
 <div id="charCountWidgetHost" style="display:none;">
@@ -28,12 +42,16 @@
 <script>
     (function () {
         var btnCompare = document.getElementById("showCompareWidget");
+        var btnSimilarity = document.getElementById("showSimilarityWidget");
+        var btnJsonViewer = document.getElementById("showJsonViewerWidget");
         var btnCount = document.getElementById("showCharCountWidget");
         var btnWordToNumber = document.getElementById("showWordToNumberWidget");
         var hostCompare = document.getElementById("compareWidgetHost");
+        var hostSimilarity = document.getElementById("similarityWidgetHost");
+        var hostJsonViewer = document.getElementById("jsonViewerWidgetHost");
         var hostCount = document.getElementById("charCountWidgetHost");
         var hostWordToNumber = document.getElementById("wordToNumberWidgetHost");
-        if (!btnCompare || !btnCount || !btnWordToNumber || !hostCompare || !hostCount || !hostWordToNumber) return;
+        if (!btnCompare || !btnSimilarity || !btnJsonViewer || !btnCount || !btnWordToNumber || !hostCompare || !hostSimilarity || !hostJsonViewer || !hostCount || !hostWordToNumber) return;
 
         function setActive(btn, active) {
             if (active) {
@@ -47,22 +65,30 @@
 
         function show(which) {
             hostCompare.style.display = which === "compare" ? "block" : "none";
+            hostSimilarity.style.display = which === "similarity" ? "block" : "none";
+            hostJsonViewer.style.display = which === "json" ? "block" : "none";
             hostCount.style.display = which === "count" ? "block" : "none";
             hostWordToNumber.style.display = which === "wtn" ? "block" : "none";
 
             // Selected button = primary, other = white (outline)
             setActive(btnCompare, which === "compare");
+            setActive(btnSimilarity, which === "similarity");
+            setActive(btnJsonViewer, which === "json");
             setActive(btnCount, which === "count");
             setActive(btnWordToNumber, which === "wtn");
 
             var target =
                 which === "compare" ? hostCompare :
+                which === "similarity" ? hostSimilarity :
+                which === "json" ? hostJsonViewer :
                 which === "count" ? hostCount :
                 hostWordToNumber;
             target.scrollIntoView({ behavior: "smooth", block: "start" });
         }
 
         btnCompare.addEventListener("click", function () { show("compare"); });
+        btnSimilarity.addEventListener("click", function () { show("similarity"); });
+        btnJsonViewer.addEventListener("click", function () { show("json"); });
         btnCount.addEventListener("click", function () { show("count"); });
         btnWordToNumber.addEventListener("click", function () { show("wtn"); });
     })();

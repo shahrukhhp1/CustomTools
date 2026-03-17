@@ -1,0 +1,221 @@
+@model string?
+
+@{
+    var title = string.IsNullOrWhiteSpace(Model) ? "JSON viewer" : Model!;
+}
+
+<style>
+    .json-viewer {
+        padding: 16px;
+    }
+
+    .json-viewer h1 {
+        text-align: center;
+        margin: 0 0 12px 0;
+    }
+
+    .json-controls {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin: 0 0 12px 0;
+    }
+
+    .json-options {
+        display: flex;
+        gap: 16px;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin: 0 0 12px 0;
+        padding: 10px 12px;
+        border: 1px solid rgba(0,0,0,0.15);
+        border-radius: 10px;
+    }
+
+    .json-options label {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        white-space: nowrap;
+    }
+
+    .json-input textarea {
+        width: 100%;
+        height: 42vh;
+        min-height: 220px;
+        box-sizing: border-box;
+        padding: 12px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        font-size: 12px;
+        line-height: 1.35;
+        tab-size: 2;
+    }
+
+    .json-status {
+        margin-top: 12px;
+        font-weight: 700;
+    }
+
+    .json-warn {
+        margin-top: 10px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        background: rgba(255, 193, 7, 0.25);
+        border: 1px solid rgba(255, 193, 7, 0.45);
+        white-space: pre-wrap;
+    }
+
+    .json-output {
+        margin-top: 10px;
+        padding: 12px;
+        border: 1px solid rgba(0,0,0,0.15);
+        border-radius: 10px;
+        overflow: auto;
+        max-height: 55vh;
+        white-space: pre;
+        word-break: normal;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        font-size: 12px;
+        line-height: 1.35;
+        tab-size: 2;
+        background: rgba(0,0,0,0.02);
+    }
+
+    .json-output .k { color: #0d6efd; }    /* keys */
+    .json-output .s { color: #198754; }    /* strings */
+    .json-output .n { color: #d63384; }    /* numbers */
+    .json-output .b { color: #fd7e14; }    /* booleans/null */
+    .json-output .p { color: #6c757d; }    /* punctuation */
+</style>
+
+@Html.AntiForgeryToken()
+
+<script>
+    function animateScrollTo(targetY, durationMs) {
+        const prefersReducedMotion =
+            window.matchMedia &&
+            window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+        if (prefersReducedMotion) {
+            window.scrollTo(0, targetY);
+            return;
+        }
+
+        const startY = window.pageYOffset;
+        const delta = targetY - startY;
+        const start = performance.now();
+
+        function easeInOutCubic(t) {
+            return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+        }
+
+        function step(now) {
+            const t = Math.min(1, (now - start) / durationMs);
+            const eased = easeInOutCubic(t);
+            window.scrollTo(0, Math.round(startY + delta * eased));
+            if (t < 1) requestAnimationFrame(step);
+        }
+
+        requestAnimationFrame(step);
+    }
+
+    function escapeHtml(s) {
+        return (s || "")
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll("\"", "&quot;")
+            .replaceAll("'", "&#39;");
+    }
+
+    // Lightweight, best-effort JSON-ish syntax highlighting on already-indented text.
+    function highlightJsonish(text) {
+        const escaped = escapeHtml(text);
+        // Strings
+        let html = escaped.replace(/"(?:\\.|[^"\\])*"/g, (m) => `<span class="s">${m}</span>`);
+        // Numbers
+        html = html.replace(/\b-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?\b/g, (m) => `<span class="n">${m}</span>`);
+        // Booleans/null
+        html = html.replace(/\b(true|false|null)\b/g, (m) => `<span class="b">${m}</span>`);
+        // Keys (string followed by :)
+        html = html.replace(/(<span class="s">"(?:\\.|[^"\\])*"<\/span>)(\s*):/g, (_m, s, c) => `<span class="k">${s}</span>${c}:`);
+        // Punctuation
+        html = html.replace(/[{}\[\],:]/g, (m) => `<span class="p">${m}</span>`);
+        return html;
+    }
+
+    async function viewJson() {
+        const input = document.getElementById("jsonInput").value;
+        const attemptRepair = document.getElementById("jsonAttemptRepair").checked;
+        const token = document.querySelector("input[name='__RequestVerificationToken']")?.value;
+
+        const statusEl = document.getElementById("jsonStatus");
+        const warnEl = document.getElementById("jsonWarn");
+        const outEl = document.getElementById("jsonOutput");
+
+        statusEl.textContent = "Processing…";
+        warnEl.style.display = "none";
+        warnEl.textContent = "";
+        outEl.textContent = "";
+
+        const form = new URLSearchParams();
+        form.set("input", input);
+        form.set("attemptRepair", attemptRepair ? "true" : "false");
+
+        const resp = await fetch("/Home/JsonView", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+                "RequestVerificationToken": token || ""
+            },
+            body: form.toString()
+        });
+
+        if (!resp.ok) {
+            statusEl.textContent = "JSON view failed (" + resp.status + ")";
+            return;
+        }
+
+        const data = await resp.json();
+        statusEl.textContent = data.statusText || "Done";
+
+        if (data.warnings && Array.isArray(data.warnings) && data.warnings.length) {
+            warnEl.style.display = "block";
+            warnEl.textContent = data.warnings.join("\n");
+        }
+
+        const display = data.displayText || "";
+        outEl.innerHTML = highlightJsonish(display);
+
+        // Auto-scroll to the result so it's immediately visible.
+        const targetEl = (warnEl.style.display !== "none") ? warnEl : outEl;
+        requestAnimationFrame(() => {
+            const y =
+                targetEl.getBoundingClientRect().top +
+                window.pageYOffset -
+                Math.floor(window.innerHeight / 6);
+            animateScrollTo(Math.max(0, y), 450);
+        });
+    }
+</script>
+
+<div class="json-viewer">
+    <h1>@title</h1>
+
+    <div class="json-controls">
+        <button type="button" onclick="viewJson()">View / format</button>
+    </div>
+
+    <div class="json-options">
+        <label><input id="jsonAttemptRepair" type="checkbox" checked />Try to repair invalid JSON</label>
+    </div>
+
+    <div class="json-input">
+        <textarea id="jsonInput" placeholder="Paste JSON here (it can be partially broken)"></textarea>
+    </div>
+
+    <div id="jsonStatus" class="json-status"></div>
+    <div id="jsonWarn" class="json-warn" style="display:none;"></div>
+    <pre id="jsonOutput" class="json-output"></pre>
+</div>

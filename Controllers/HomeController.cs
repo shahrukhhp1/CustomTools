@@ -1,5 +1,8 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.Text;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 using CustomWebTools.Models;
 using Microsoft.AspNetCore.Mvc;
 
@@ -292,6 +295,612 @@ namespace CustomWebTools.Controllers
             }
 
             return Content(sb.ToString(), "text/html; charset=utf-8");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult Similarity(
+            [FromForm] string text1,
+            [FromForm] string text2,
+            [FromForm] bool removeDiacritics = true,
+            [FromForm] bool ignoreCase = true,
+            [FromForm] bool stripPunctuation = true,
+            [FromForm] bool collapseWhitespace = true,
+            [FromForm] bool removeStopwords = false,
+            [FromForm] int wordShingleSize = 3,
+            [FromForm] int charGramSize = 5)
+        {
+            text1 ??= "";
+            text2 ??= "";
+
+            var warnings = new List<string>();
+            var notes = new List<string>();
+
+            const int maxInputChars = 300_000;
+            if (text1.Length > maxInputChars)
+            {
+                text1 = text1[..maxInputChars];
+                warnings.Add($"Text A was truncated to {maxInputChars:n0} characters for performance.");
+            }
+            if (text2.Length > maxInputChars)
+            {
+                text2 = text2[..maxInputChars];
+                warnings.Add($"Text B was truncated to {maxInputChars:n0} characters for performance.");
+            }
+
+            wordShingleSize = Math.Clamp(wordShingleSize, 2, 8);
+            charGramSize = Math.Clamp(charGramSize, 3, 10);
+
+            var normA = Normalize(text1, removeDiacritics, ignoreCase, stripPunctuation, collapseWhitespace);
+            var normB = Normalize(text2, removeDiacritics, ignoreCase, stripPunctuation, collapseWhitespace);
+
+            var tokensA = Tokenize(normA, removeStopwords);
+            var tokensB = Tokenize(normB, removeStopwords);
+
+            if (removeStopwords)
+            {
+                notes.Add("Stopwords removed (can reduce similarity on very short texts).");
+            }
+
+            var tfA = TermFrequency(tokensA);
+            var tfB = TermFrequency(tokensB);
+            var cosine = CosineSimilarity(tfA, tfB);
+
+            var shinglesA = WordShingles(tokensA, wordShingleSize);
+            var shinglesB = WordShingles(tokensB, wordShingleSize);
+            var shingleJ = Jaccard(shinglesA, shinglesB);
+
+            var charsA = normA;
+            var charsB = normB;
+            var charA = CharGrams(charsA, charGramSize);
+            var charB = CharGrams(charsB, charGramSize);
+            var charJ = Jaccard(charA, charB);
+
+            // Heuristic combined score:
+            // - cosine (bag of words) helps re-ordering + mild paraphrase
+            // - word shingles catch copy-with-small-edits
+            // - char grams catch minor formatting/typo changes
+            var combined =
+                0.50 * cosine +
+                0.35 * shingleJ +
+                0.15 * charJ;
+            combined = Math.Clamp(combined, 0, 1);
+
+            // Basic "paraphrase-like" hint: high cosine but low shingles can indicate re-ordering/paraphrase.
+            if (cosine >= 0.75 && shingleJ <= 0.35)
+            {
+                notes.Add("High word overlap but low phrase overlap: could be heavy re-ordering/paraphrase (or shared topic terms).");
+            }
+            if (tokensA.Length < 20 || tokensB.Length < 20)
+            {
+                notes.Add("Short text: similarity scores are less stable.");
+            }
+
+            var commonTokenCount = tfA.Keys.Count(k => tfB.ContainsKey(k));
+
+            return Json(new
+            {
+                combinedScore = combined,
+                cosineScore = cosine,
+                wordShingleJaccard = shingleJ,
+                charGramJaccard = charJ,
+                wordShingleSize,
+                charGramSize,
+                tokenCountA = tokensA.Length,
+                tokenCountB = tokensB.Length,
+                uniqueTokenCountA = tfA.Count,
+                uniqueTokenCountB = tfB.Count,
+                commonTokenCount,
+                warnings,
+                notes
+            });
+
+            static string Normalize(string input, bool removeDiacritics, bool ignoreCase, bool stripPunctuation, bool collapseWhitespace)
+            {
+                input = input.Replace("\r\n", "\n").Replace('\r', '\n');
+
+                if (removeDiacritics)
+                {
+                    var formD = input.Normalize(NormalizationForm.FormD);
+                    var sb = new StringBuilder(formD.Length);
+                    foreach (var ch in formD)
+                    {
+                        var uc = CharUnicodeInfo.GetUnicodeCategory(ch);
+                        if (uc != UnicodeCategory.NonSpacingMark)
+                        {
+                            sb.Append(ch);
+                        }
+                    }
+                    input = sb.ToString().Normalize(NormalizationForm.FormC);
+                }
+
+                if (ignoreCase)
+                {
+                    input = input.ToLowerInvariant();
+                }
+
+                if (stripPunctuation)
+                {
+                    var sb = new StringBuilder(input.Length);
+                    foreach (var ch in input)
+                    {
+                        if (char.IsLetterOrDigit(ch) || char.IsWhiteSpace(ch))
+                        {
+                            sb.Append(ch);
+                        }
+                        else
+                        {
+                            sb.Append(' ');
+                        }
+                    }
+                    input = sb.ToString();
+                }
+
+                if (collapseWhitespace)
+                {
+                    var sb = new StringBuilder(input.Length);
+                    var prevSpace = true;
+                    foreach (var ch in input)
+                    {
+                        var isWs = char.IsWhiteSpace(ch);
+                        if (isWs)
+                        {
+                            if (!prevSpace) sb.Append(' ');
+                            prevSpace = true;
+                        }
+                        else
+                        {
+                            sb.Append(ch);
+                            prevSpace = false;
+                        }
+                    }
+                    input = sb.ToString().Trim();
+                }
+
+                return input;
+            }
+
+            static string[] Tokenize(string normalized, bool removeStopwords)
+            {
+                if (string.IsNullOrWhiteSpace(normalized))
+                    return Array.Empty<string>();
+
+                var parts = normalized.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                if (!removeStopwords)
+                    return parts;
+
+                // Minimal English stopword set; keep small to avoid surprises.
+                // (This is optional, user-controlled.)
+                var stop = Stopwords;
+                var list = new List<string>(parts.Length);
+                foreach (var p in parts)
+                {
+                    if (!stop.Contains(p)) list.Add(p);
+                }
+                return list.ToArray();
+            }
+
+            static Dictionary<string, int> TermFrequency(string[] tokens)
+            {
+                var dict = new Dictionary<string, int>(StringComparer.Ordinal);
+                foreach (var t in tokens)
+                {
+                    if (dict.TryGetValue(t, out var c)) dict[t] = c + 1;
+                    else dict[t] = 1;
+                }
+                return dict;
+            }
+
+            static double CosineSimilarity(Dictionary<string, int> a, Dictionary<string, int> b)
+            {
+                if (a.Count == 0 || b.Count == 0) return a.Count == b.Count ? 1.0 : 0.0;
+
+                double dot = 0;
+                double normA = 0;
+                double normB = 0;
+
+                foreach (var kv in a)
+                {
+                    var va = kv.Value;
+                    normA += (double)va * va;
+                    if (b.TryGetValue(kv.Key, out var vb))
+                    {
+                        dot += (double)va * vb;
+                    }
+                }
+
+                foreach (var vb in b.Values)
+                {
+                    normB += (double)vb * vb;
+                }
+
+                var denom = Math.Sqrt(normA) * Math.Sqrt(normB);
+                if (denom <= 0) return 0;
+                return Math.Clamp(dot / denom, 0, 1);
+            }
+
+            static HashSet<string> WordShingles(string[] tokens, int n)
+            {
+                var set = new HashSet<string>(StringComparer.Ordinal);
+                if (tokens.Length == 0) return set;
+                if (tokens.Length < n)
+                {
+                    set.Add(string.Join(' ', tokens));
+                    return set;
+                }
+                for (var i = 0; i <= tokens.Length - n; i++)
+                {
+                    set.Add(string.Join(' ', tokens, i, n));
+                }
+                return set;
+            }
+
+            static HashSet<string> CharGrams(string text, int n)
+            {
+                var set = new HashSet<string>(StringComparer.Ordinal);
+                if (string.IsNullOrEmpty(text)) return set;
+                if (text.Length <= n)
+                {
+                    set.Add(text);
+                    return set;
+                }
+                for (var i = 0; i <= text.Length - n; i++)
+                {
+                    set.Add(text.Substring(i, n));
+                }
+                return set;
+            }
+
+            static double Jaccard(HashSet<string> a, HashSet<string> b)
+            {
+                if (a.Count == 0 && b.Count == 0) return 1.0;
+                if (a.Count == 0 || b.Count == 0) return 0.0;
+
+                HashSet<string> small = a.Count <= b.Count ? a : b;
+                HashSet<string> large = ReferenceEquals(small, a) ? b : a;
+
+                var inter = 0;
+                foreach (var x in small)
+                {
+                    if (large.Contains(x)) inter++;
+                }
+                var union = a.Count + b.Count - inter;
+                if (union <= 0) return 0.0;
+                return Math.Clamp((double)inter / union, 0, 1);
+            }
+        }
+
+        private static readonly HashSet<string> Stopwords = new(StringComparer.Ordinal)
+        {
+            "a","an","and","are","as","at","be","but","by","for","from","has","have","he","her","hers","him","his",
+            "i","if","in","into","is","it","its","me","my","of","on","or","our","ours","she","so","that","the",
+            "their","theirs","them","then","there","these","they","this","those","to","was","we","were","what","when",
+            "where","which","who","why","will","with","you","your","yours"
+        };
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult JsonView([FromForm] string input, [FromForm] bool attemptRepair = true)
+        {
+            input ??= "";
+
+            const int maxChars = 600_000;
+            var warnings = new List<string>();
+            if (input.Length > maxChars)
+            {
+                input = input[..maxChars];
+                warnings.Add($"Input truncated to {maxChars:n0} characters for performance.");
+            }
+
+            input = input.TrimStart('\uFEFF'); // BOM, if present
+
+            // 1) Strict parse
+            if (TryFormatStrict(input, out var strictFormatted, out var strictErr))
+            {
+                return Json(new
+                {
+                    statusText = "Valid JSON (formatted).",
+                    displayText = strictFormatted,
+                    warnings
+                });
+            }
+
+            if (!attemptRepair)
+            {
+                var structured = StructureJsonish(input, out var structWarnings);
+                warnings.AddRange(structWarnings);
+                return Json(new
+                {
+                    statusText = "JSON is not valid (structured view).",
+                    displayText = structured,
+                    warnings = new[]
+                    {
+                        "Tried to structure, but JSON is not valid.",
+                        strictErr
+                    }.Where(x => !string.IsNullOrWhiteSpace(x)).Concat(warnings).ToArray()
+                });
+            }
+
+            // 2) Repair attempt (best-effort)
+            var repaired = RepairJsonish(input, out var repairNotes);
+            warnings.AddRange(repairNotes);
+
+            if (TryFormatStrict(repaired, out var repairedFormatted, out var repairedErr))
+            {
+                return Json(new
+                {
+                    statusText = "Repaired JSON (formatted).",
+                    displayText = repairedFormatted,
+                    warnings = new[]
+                    {
+                        "Auto-fixed common issues (review output)."
+                    }.Concat(warnings).ToArray()
+                });
+            }
+
+            // 3) Still not parseable => structured token view
+            var structuredFallback = StructureJsonish(repaired, out var fallbackWarnings);
+            warnings.AddRange(fallbackWarnings);
+            warnings.Add(repairedErr);
+
+            return Json(new
+            {
+                statusText = "Tried to fix and structure but JSON is not valid.",
+                displayText = structuredFallback,
+                warnings = new[]
+                {
+                    "Tried to fix and structure but JSON is not valid."
+                }.Where(x => !string.IsNullOrWhiteSpace(x)).Concat(warnings).ToArray()
+            });
+
+            static bool TryFormatStrict(string json, out string formatted, out string error)
+            {
+                formatted = "";
+                error = "";
+                try
+                {
+                    using var doc = JsonDocument.Parse(json, new JsonDocumentOptions
+                    {
+                        AllowTrailingCommas = false,
+                        CommentHandling = JsonCommentHandling.Disallow
+                    });
+                    formatted = JsonSerializer.Serialize(doc.RootElement, new JsonSerializerOptions
+                    {
+                        WriteIndented = true
+                    });
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    error = ex.Message;
+                    return false;
+                }
+            }
+
+            static string RepairJsonish(string inputJson, out List<string> notes)
+            {
+                notes = new List<string>();
+                var s = inputJson;
+
+                // Remove JS-style comments (common in "JSON")
+                var noComments = StripComments(s);
+                if (!string.Equals(noComments, s, StringComparison.Ordinal))
+                {
+                    notes.Add("Removed comments (// and /* */).");
+                    s = noComments;
+                }
+
+                // Remove trailing commas before } or ]
+                var noTrailing = Regex.Replace(s, @",(\s*[}\]])", "$1");
+                if (!string.Equals(noTrailing, s, StringComparison.Ordinal))
+                {
+                    notes.Add("Removed trailing commas.");
+                    s = noTrailing;
+                }
+
+                // Quote unquoted property names: { a: 1 } -> { "a": 1 }
+                // This is best-effort; it only targets simple identifier-like keys.
+                var beforeKeys = s;
+                s = Regex.Replace(
+                    s,
+                    @"(?<=\{|,)\s*([A-Za-z_][A-Za-z0-9_\-]*)\s*:",
+                    m => $" \"{m.Groups[1].Value}\":",
+                    RegexOptions.CultureInvariant);
+                if (!string.Equals(beforeKeys, s, StringComparison.Ordinal))
+                {
+                    notes.Add("Quoted unquoted object keys.");
+                }
+
+                // Convert single-quoted strings to double-quoted (very common in relaxed JSON).
+                // Best-effort: only converts '...'-style tokens, not apostrophes inside words.
+                var beforeSingles = s;
+                s = Regex.Replace(s, @"'([^'\\]*(?:\\.[^'\\]*)*)'", m =>
+                {
+                    var inner = m.Groups[1].Value.Replace("\"", "\\\"");
+                    return $"\"{inner}\"";
+                });
+                if (!string.Equals(beforeSingles, s, StringComparison.Ordinal))
+                {
+                    notes.Add("Converted single-quoted strings to double quotes.");
+                }
+
+                // Normalize Python/JS-ish literals sometimes seen in "JSON"
+                var beforeLits = s;
+                s = Regex.Replace(s, @"\bTrue\b", "true");
+                s = Regex.Replace(s, @"\bFalse\b", "false");
+                s = Regex.Replace(s, @"\bNone\b", "null");
+                if (!string.Equals(beforeLits, s, StringComparison.Ordinal))
+                {
+                    notes.Add("Normalized True/False/None literals.");
+                }
+
+                return s;
+
+                static string StripComments(string input)
+                {
+                    if (string.IsNullOrEmpty(input)) return input;
+                    var sb = new StringBuilder(input.Length);
+                    var i = 0;
+                    var inString = false;
+                    char stringQuote = '"';
+
+                    while (i < input.Length)
+                    {
+                        var c = input[i];
+                        if (inString)
+                        {
+                            sb.Append(c);
+                            if (c == '\\' && i + 1 < input.Length)
+                            {
+                                sb.Append(input[i + 1]);
+                                i += 2;
+                                continue;
+                            }
+                            if (c == stringQuote) inString = false;
+                            i++;
+                            continue;
+                        }
+
+                        if (c == '"' || c == '\'')
+                        {
+                            inString = true;
+                            stringQuote = c;
+                            sb.Append(c);
+                            i++;
+                            continue;
+                        }
+
+                        // Line comment //
+                        if (c == '/' && i + 1 < input.Length && input[i + 1] == '/')
+                        {
+                            i += 2;
+                            while (i < input.Length && input[i] != '\n') i++;
+                            continue;
+                        }
+
+                        // Block comment /* */
+                        if (c == '/' && i + 1 < input.Length && input[i + 1] == '*')
+                        {
+                            i += 2;
+                            while (i + 1 < input.Length && !(input[i] == '*' && input[i + 1] == '/')) i++;
+                            i = Math.Min(input.Length, i + 2);
+                            continue;
+                        }
+
+                        sb.Append(c);
+                        i++;
+                    }
+
+                    return sb.ToString();
+                }
+            }
+
+            static string StructureJsonish(string inputJson, out List<string> notes)
+            {
+                notes = new List<string>();
+                if (string.IsNullOrWhiteSpace(inputJson))
+                {
+                    notes.Add("Empty input.");
+                    return "";
+                }
+
+                var s = inputJson.Replace("\r\n", "\n").Replace('\r', '\n');
+
+                var sb = new StringBuilder(Math.Min(256_000, s.Length + 256));
+                var indent = 0;
+                var inString = false;
+                char quote = '"';
+                var escape = false;
+                var depthBalance = 0;
+
+                void NewLine()
+                {
+                    sb.Append('\n');
+                    sb.Append(' ', indent * 2);
+                }
+
+                // Token-ish pretty printer that tries to keep structure even when invalid.
+                for (var i = 0; i < s.Length; i++)
+                {
+                    var c = s[i];
+                    if (inString)
+                    {
+                        sb.Append(c);
+                        if (escape)
+                        {
+                            escape = false;
+                            continue;
+                        }
+                        if (c == '\\')
+                        {
+                            escape = true;
+                            continue;
+                        }
+                        if (c == quote)
+                        {
+                            inString = false;
+                        }
+                        continue;
+                    }
+
+                    switch (c)
+                    {
+                        case '"':
+                        case '\'':
+                            inString = true;
+                            quote = c;
+                            sb.Append(c);
+                            break;
+
+                        case '{':
+                        case '[':
+                            sb.Append(c);
+                            depthBalance++;
+                            indent++;
+                            NewLine();
+                            break;
+
+                        case '}':
+                        case ']':
+                            depthBalance--;
+                            indent = Math.Max(0, indent - 1);
+                            NewLine();
+                            sb.Append(c);
+                            break;
+
+                        case ',':
+                            sb.Append(c);
+                            NewLine();
+                            break;
+
+                        case ':':
+                            sb.Append(": ");
+                            break;
+
+                        case '\n':
+                            // ignore original newlines; we control formatting
+                            break;
+
+                        default:
+                            if (char.IsWhiteSpace(c))
+                            {
+                                // collapse whitespace
+                                if (sb.Length > 0 && sb[^1] != ' ' && sb[^1] != '\n')
+                                    sb.Append(' ');
+                            }
+                            else
+                            {
+                                sb.Append(c);
+                            }
+                            break;
+                    }
+                }
+
+                if (inString) notes.Add("Unterminated string detected (input ended inside a quote).");
+                if (depthBalance != 0) notes.Add("Unbalanced braces/brackets detected (structure may be incomplete).");
+
+                return sb.ToString().Trim();
+            }
         }
 
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]

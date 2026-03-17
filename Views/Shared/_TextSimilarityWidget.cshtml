@@ -1,0 +1,212 @@
+@model string?
+
+@{
+    var title = string.IsNullOrWhiteSpace(Model) ? "Text similarity" : Model!;
+}
+
+<style>
+    .similarity-page {
+        padding: 16px;
+    }
+
+    .similarity-page h1 {
+        text-align: center;
+        margin: 0 0 12px 0;
+    }
+
+    .sim-controls {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin: 0 0 12px 0;
+        flex-wrap: wrap;
+    }
+
+    .sim-options {
+        display: flex;
+        gap: 16px;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin: 0 0 12px 0;
+        padding: 10px 12px;
+        border: 1px solid rgba(0,0,0,0.15);
+        border-radius: 10px;
+    }
+
+    .sim-options label {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        white-space: nowrap;
+    }
+
+    .sim-options input[type="number"] {
+        width: 90px;
+        padding: 4px 6px;
+    }
+
+    .sim-inputs {
+        display: flex;
+        justify-content: space-between;
+        gap: 5%;
+        align-items: stretch;
+    }
+
+    .sim-inputs textarea {
+        width: 50%;
+        height: 40vh;
+        min-height: 200px;
+        box-sizing: border-box;
+        padding: 12px;
+    }
+
+    .sim-result {
+        margin-top: 16px;
+    }
+
+    .sim-bar {
+        height: 16px;
+        border-radius: 10px;
+        background: rgba(0,0,0,0.08);
+        overflow: hidden;
+    }
+
+    .sim-bar > div {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, #dc3545, #ffc107, #198754);
+        transition: width 250ms ease;
+    }
+
+    .sim-score {
+        margin-top: 8px;
+        font-weight: 700;
+    }
+
+    .sim-details {
+        margin-top: 10px;
+        padding: 10px 12px;
+        border: 1px solid rgba(0,0,0,0.15);
+        border-radius: 10px;
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        font-size: 12px;
+        line-height: 1.35;
+    }
+
+    .sim-warn {
+        margin-top: 10px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        background: rgba(255, 193, 7, 0.25);
+        border: 1px solid rgba(255, 193, 7, 0.45);
+    }
+</style>
+
+@Html.AntiForgeryToken()
+
+<script>
+    function clamp01(x) { return Math.max(0, Math.min(1, x)); }
+
+    async function compareSimilarity() {
+        const text1 = document.getElementById("simText1").value;
+        const text2 = document.getElementById("simText2").value;
+
+        const token = document.querySelector("input[name='__RequestVerificationToken']")?.value;
+        const form = new URLSearchParams();
+        form.set("text1", text1);
+        form.set("text2", text2);
+
+        form.set("removeDiacritics", document.getElementById("simRemoveDiacritics").checked ? "true" : "false");
+        form.set("ignoreCase", document.getElementById("simIgnoreCase").checked ? "true" : "false");
+        form.set("stripPunctuation", document.getElementById("simStripPunctuation").checked ? "true" : "false");
+        form.set("collapseWhitespace", document.getElementById("simCollapseWhitespace").checked ? "true" : "false");
+        form.set("removeStopwords", document.getElementById("simRemoveStopwords").checked ? "true" : "false");
+        form.set("wordShingleSize", document.getElementById("simWordShingleSize").value || "3");
+        form.set("charGramSize", document.getElementById("simCharGramSize").value || "5");
+
+        const scoreEl = document.getElementById("simScore");
+        const detailsEl = document.getElementById("simDetails");
+        const warnEl = document.getElementById("simWarn");
+        const barFill = document.getElementById("simBarFill");
+
+        warnEl.style.display = "none";
+        warnEl.innerText = "";
+        scoreEl.innerText = "Calculating…";
+        detailsEl.innerText = "";
+        barFill.style.width = "0%";
+
+        const resp = await fetch("/Home/Similarity", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+                "RequestVerificationToken": token || ""
+            },
+            body: form.toString()
+        });
+
+        if (!resp.ok) {
+            scoreEl.innerText = "Similarity failed (" + resp.status + ")";
+            return;
+        }
+
+        const data = await resp.json();
+        const combined = clamp01((data.combinedScore || 0));
+        barFill.style.width = Math.round(combined * 100) + "%";
+
+        scoreEl.innerText =
+            "Similarity: " + Math.round(combined * 100) + "% (combined)";
+
+        const lines = [];
+        lines.push("Combined:        " + Math.round((data.combinedScore || 0) * 100) + "%");
+        lines.push("Cosine (words):  " + Math.round((data.cosineScore || 0) * 100) + "%");
+        lines.push("Jaccard (w-" + (data.wordShingleSize || 3) + "):  " + Math.round((data.wordShingleJaccard || 0) * 100) + "%");
+        lines.push("Jaccard (c-" + (data.charGramSize || 5) + "):  " + Math.round((data.charGramJaccard || 0) * 100) + "%");
+        lines.push("");
+        lines.push("Tokens A/B:      " + (data.tokenCountA ?? "?") + " / " + (data.tokenCountB ?? "?"));
+        lines.push("Unique A/B:      " + (data.uniqueTokenCountA ?? "?") + " / " + (data.uniqueTokenCountB ?? "?"));
+        lines.push("Common tokens:   " + (data.commonTokenCount ?? "?"));
+        if (data.notes && Array.isArray(data.notes) && data.notes.length) {
+            lines.push("");
+            lines.push("Notes:");
+            for (const n of data.notes) lines.push("- " + n);
+        }
+        detailsEl.innerText = lines.join("\n");
+
+        if (data.warnings && Array.isArray(data.warnings) && data.warnings.length) {
+            warnEl.style.display = "block";
+            warnEl.innerText = data.warnings.join("\n");
+        }
+    }
+</script>
+
+<div class="similarity-page">
+    <h1>@title</h1>
+
+    <div class="sim-controls">
+        <button id="simCompareBtn" onclick="compareSimilarity()">Similarity score</button>
+    </div>
+
+    <div class="sim-options">
+        <label><input id="simRemoveDiacritics" type="checkbox" checked />Remove diacritics</label>
+        <label><input id="simIgnoreCase" type="checkbox" checked />Ignore case</label>
+        <label><input id="simStripPunctuation" type="checkbox" checked />Strip punctuation</label>
+        <label><input id="simCollapseWhitespace" type="checkbox" checked />Collapse whitespace</label>
+        <label><input id="simRemoveStopwords" type="checkbox" />Remove stopwords</label>
+        <label>Word shingle <input id="simWordShingleSize" type="number" min="2" max="8" step="1" value="3" /></label>
+        <label>Char gram <input id="simCharGramSize" type="number" min="3" max="10" step="1" value="5" /></label>
+    </div>
+
+    <div class="sim-inputs">
+        <textarea id="simText1" placeholder="Enter text A"></textarea>
+        <textarea id="simText2" placeholder="Enter text B"></textarea>
+    </div>
+
+    <div class="sim-result">
+        <div class="sim-bar"><div id="simBarFill"></div></div>
+        <div id="simScore" class="sim-score"></div>
+        <div id="simWarn" class="sim-warn" style="display:none;"></div>
+        <div id="simDetails" class="sim-details"></div>
+    </div>
+</div>
