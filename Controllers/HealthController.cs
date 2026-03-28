@@ -50,8 +50,8 @@ namespace CustomWebTools.Controllers
                 {
                     workingSetMb = Math.Round(workingSetMb, 1),
                     gcHeapMb = Math.Round(gcHeapMb, 1),
-                    workingSetPctOfLimit = wsPct.HasValue ? Math.Round(wsPct.Value, 1) : null,
-                    gcHeapPctOfLimit = gcPct.HasValue ? Math.Round(gcPct.Value, 1) : null
+                    workingSetPctOfLimit = wsPct.HasValue ? (double?)Math.Round(wsPct.Value, 1) : null,
+                    gcHeapPctOfLimit = gcPct.HasValue ? (double?)Math.Round(gcPct.Value, 1) : null
                 }
             });
         }
