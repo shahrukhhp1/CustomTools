@@ -12,19 +12,20 @@
     <p>
         The tools are designed to work without saving your pasted content to a database.
         Some tools run server-side (for example: diffing text, similarity scoring, JSON formatting/repair), which means your input is sent to the server
-        to generate a result. We do not intentionally persist that input after processing.
+        to generate a result. Your input is processed to compute the response and then discarded after the result is returned (not saved to a database).
     </p>
 
     <h2 class="h5 mt-4">Do you log my input?</h2>
     <p>
-        We do not intentionally log the content you paste into the tools. However, like most websites, the server may keep standard operational logs
-        (for example: request timestamps, status codes, and error messages). Avoid pasting secrets.
+        We do not log the content you paste into the tools. Server calls use your input only for processing and do not store it after the response is generated.
+        Like most websites, the server may keep standard operational logs that do not include your pasted content (for example: request timestamps and status codes).
+        Avoid pasting secrets you can’t afford to expose.
     </p>
 
     <h2 class="h5 mt-4">Tracking &amp; analytics</h2>
     <p>
-        The site does not require an account or sign-up. If analytics are enabled, we use Umami (a privacy-focused analytics tool)
-        to understand basic usage (for example: page views) and improve the site.
+        The site does not require an account or sign-up. We use Umami (a privacy-focused analytics tool) for basic, aggregate traffic insights
+        such as page views (which pages are visited) to help improve the site. We do not use it to record the content you paste into tools.
     </p>
 
     <h2 class="h5 mt-4">Contact</h2>
