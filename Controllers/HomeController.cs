@@ -319,7 +319,7 @@ namespace CustomWebTools.Controllers
                 var l2line = lineIndex < l2lines.Length ? l2lines[lineIndex] : "";
 
                 // Use aligned diff for typical lines; fall back for very long lines to avoid heavy computation.
-                const int maxAlignedLength = 4000;
+                const int maxAlignedLength = 12000;
                 if (l1line.Length <= maxAlignedLength && l2line.Length <= maxAlignedLength)
                 {
                     AppendAlignedCompare(sb, l1line, l2line);
@@ -352,7 +352,7 @@ namespace CustomWebTools.Controllers
             var warnings = new List<string>();
             var notes = new List<string>();
 
-            const int maxInputChars = 300_000;
+            const int maxInputChars = 1_000_000;
             if (text1.Length > maxInputChars)
             {
                 text1 = text1[..maxInputChars];
@@ -382,24 +382,48 @@ namespace CustomWebTools.Controllers
             var tfB = TermFrequency(tokensB);
             var cosine = CosineSimilarity(tfA, tfB);
 
-            var shinglesA = WordShingles(tokensA, wordShingleSize);
-            var shinglesB = WordShingles(tokensB, wordShingleSize);
-            var shingleJ = Jaccard(shinglesA, shinglesB);
+            const int maxTokensForWordShingles = 40_000;
+            var shingleJ = 0.0;
+            var didComputeShingles = true;
+            if (tokensA.Length > maxTokensForWordShingles || tokensB.Length > maxTokensForWordShingles)
+            {
+                didComputeShingles = false;
+                notes.Add($"Skipped word shingles due to size (>{maxTokensForWordShingles:n0} tokens).");
+            }
+            else
+            {
+                var shinglesA = WordShingles(tokensA, wordShingleSize);
+                var shinglesB = WordShingles(tokensB, wordShingleSize);
+                shingleJ = Jaccard(shinglesA, shinglesB);
+            }
 
             var charsA = normA;
             var charsB = normB;
-            var charA = CharGrams(charsA, charGramSize);
-            var charB = CharGrams(charsB, charGramSize);
-            var charJ = Jaccard(charA, charB);
+            const int maxCharsForCharGrams = 250_000;
+            var charJ = 0.0;
+            var didComputeCharGrams = true;
+            if (charsA.Length > maxCharsForCharGrams || charsB.Length > maxCharsForCharGrams)
+            {
+                didComputeCharGrams = false;
+                notes.Add($"Skipped character grams due to size (>{maxCharsForCharGrams:n0} characters after normalization).");
+            }
+            else
+            {
+                var charA = CharGrams(charsA, charGramSize);
+                var charB = CharGrams(charsB, charGramSize);
+                charJ = Jaccard(charA, charB);
+            }
 
             // Heuristic combined score:
             // - cosine (bag of words) helps re-ordering + mild paraphrase
             // - word shingles catch copy-with-small-edits
             // - char grams catch minor formatting/typo changes
-            var combined =
-                0.50 * cosine +
-                0.35 * shingleJ +
-                0.15 * charJ;
+            var wCosine = 0.50;
+            var wShingle = 0.35;
+            var wChar = 0.15;
+            if (!didComputeShingles) { wCosine += wShingle; wShingle = 0; }
+            if (!didComputeCharGrams) { wCosine += wChar; wChar = 0; }
+            var combined = (wCosine * cosine) + (wShingle * shingleJ) + (wChar * charJ);
             combined = Math.Clamp(combined, 0, 1);
 
             // Basic "paraphrase-like" hint: high cosine but low shingles can indicate re-ordering/paraphrase.
@@ -620,7 +644,7 @@ namespace CustomWebTools.Controllers
         {
             input ??= "";
 
-            const int maxChars = 600_000;
+            const int maxChars = 2_000_000;
             var warnings = new List<string>();
             if (input.Length > maxChars)
             {

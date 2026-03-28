@@ -1,0 +1,234 @@
+@{
+    // Title + meta set in controller
+}
+
+<style>
+    .health-wrap {
+        max-width: 980px;
+        margin: 0 auto;
+    }
+
+    .health-grid {
+        display: grid;
+        grid-template-columns: repeat(1, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    @@media (min-width: 768px) {
+        .health-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    .health-card {
+        border: 1px solid rgba(0,0,0,0.08);
+        border-radius: 14px;
+        background: #fff;
+        padding: 14px 16px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.04);
+    }
+
+    html[data-theme="dark"] .health-card {
+        background: var(--dt-surface);
+        border-color: var(--dt-border);
+    }
+
+    .health-k {
+        color: rgba(0,0,0,0.62);
+        font-weight: 700;
+        font-size: 0.9rem;
+    }
+
+    html[data-theme="dark"] .health-k {
+        color: var(--dt-muted);
+    }
+
+    .health-v {
+        font-weight: 900;
+        letter-spacing: -0.01em;
+        font-size: 1.05rem;
+        margin-top: 4px;
+        word-break: break-word;
+    }
+
+    .health-badge {
+        display: inline-block;
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-weight: 900;
+        border: 1px solid rgba(0,0,0,0.08);
+        background: rgba(0,0,0,0.03);
+    }
+
+    .ok { color: #146c43; border-color: rgba(25,135,84,0.35); background: rgba(25,135,84,0.10); }
+    .bad { color: #b02a37; border-color: rgba(220,53,69,0.35); background: rgba(220,53,69,0.10); }
+
+    .mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        font-size: 12px;
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+
+    .bar {
+        height: 12px;
+        border-radius: 999px;
+        background: rgba(0,0,0,0.08);
+        overflow: hidden;
+        margin-top: 10px;
+        border: 1px solid rgba(0,0,0,0.08);
+    }
+
+    html[data-theme="dark"] .bar {
+        background: rgba(255,255,255,0.10);
+        border-color: var(--dt-border);
+    }
+
+    .bar > div {
+        height: 100%;
+        width: 0%;
+        transition: width 250ms ease;
+        background: linear-gradient(90deg, #198754, #ffc107, #dc3545);
+    }
+</style>
+
+<div class="health-wrap">
+    <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-3">
+        <div>
+            <h1 class="mb-1">Health</h1>
+            <div class="text-muted">Auto-refreshes every 10 seconds. Endpoint: <span class="mono">/health</span></div>
+        </div>
+        <div class="d-flex gap-2">
+            <button id="healthRefresh" type="button" class="btn btn-primary btn-sm">Refresh</button>
+            <button id="healthCopy" type="button" class="btn btn-outline-secondary btn-sm" disabled>Copy JSON</button>
+        </div>
+    </div>
+
+    <div class="health-grid">
+        <div class="health-card">
+            <div class="health-k">Status</div>
+            <div class="health-v"><span id="healthStatus" class="health-badge">…</span></div>
+            <div class="text-muted mt-2">Last updated: <span id="healthUpdated" class="mono">…</span></div>
+        </div>
+
+        <div class="health-card">
+            <div class="health-k">Environment</div>
+            <div id="healthEnv" class="health-v">…</div>
+        </div>
+
+        <div class="health-card">
+            <div class="health-k">Uptime</div>
+            <div id="healthUptime" class="health-v">…</div>
+            <div class="text-muted mt-2">Process start (UTC): <span id="healthStart" class="mono">…</span></div>
+        </div>
+
+        <div class="health-card">
+            <div class="health-k">Version</div>
+            <div id="healthVersion" class="health-v">…</div>
+            <div class="text-muted mt-2">Informational: <span id="healthInfoVer" class="mono">…</span></div>
+        </div>
+
+        <div class="health-card">
+            <div class="health-k">Memory</div>
+            <div class="health-v">
+                Working set: <span id="healthWs">…</span> / <span id="healthMemLimit">1024</span> MB
+                <span class="text-muted">(<span id="healthWsPct">…</span>%)</span>
+            </div>
+            <div class="text-muted mt-1">
+                GC heap: <span id="healthGc">…</span> MB
+            </div>
+            <div class="bar" aria-hidden="true"><div id="healthMemBar"></div></div>
+        </div>
+
+        <div class="health-card">
+            <div class="health-k">Raw JSON</div>
+            <div id="healthJson" class="mono">…</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let lastHealthJson = "";
+
+    function formatUptime(seconds) {
+        if (typeof seconds !== "number" || !isFinite(seconds)) return "unknown";
+        const s = Math.max(0, Math.floor(seconds));
+        const days = Math.floor(s / 86400);
+        const hours = Math.floor((s % 86400) / 3600);
+        const mins = Math.floor((s % 3600) / 60);
+        const secs = s % 60;
+        return (days ? (days + "d ") : "") + hours + "h " + mins + "m " + secs + "s";
+    }
+
+    async function loadHealth() {
+        const statusEl = document.getElementById("healthStatus");
+        const updatedEl = document.getElementById("healthUpdated");
+        const envEl = document.getElementById("healthEnv");
+        const uptimeEl = document.getElementById("healthUptime");
+        const startEl = document.getElementById("healthStart");
+        const verEl = document.getElementById("healthVersion");
+        const infoEl = document.getElementById("healthInfoVer");
+        const wsEl = document.getElementById("healthWs");
+        const wsPctEl = document.getElementById("healthWsPct");
+        const limitEl = document.getElementById("healthMemLimit");
+        const barEl = document.getElementById("healthMemBar");
+        const gcEl = document.getElementById("healthGc");
+        const jsonEl = document.getElementById("healthJson");
+        const copyBtn = document.getElementById("healthCopy");
+
+        statusEl.textContent = "…";
+        statusEl.className = "health-badge";
+        updatedEl.textContent = new Date().toISOString();
+        copyBtn.disabled = true;
+
+        try {
+            const resp = await fetch("/health", { cache: "no-store" });
+            if (!resp.ok) throw new Error("HTTP " + resp.status);
+            const data = await resp.json();
+            lastHealthJson = JSON.stringify(data, null, 2);
+
+            const ok = (data.status || "").toString().toLowerCase() === "ok";
+            statusEl.textContent = ok ? "OK" : (data.status || "unknown");
+            statusEl.className = "health-badge " + (ok ? "ok" : "bad");
+
+            updatedEl.textContent = new Date().toISOString();
+            envEl.textContent = data.environment || "unknown";
+            uptimeEl.textContent = formatUptime(data.uptimeSeconds);
+            startEl.textContent = data.processStartUtc || "unknown";
+            verEl.textContent = data.version || "unknown";
+            infoEl.textContent = data.informationalVersion || "unknown";
+            wsEl.textContent = (data.memory && data.memory.workingSetMb != null) ? String(data.memory.workingSetMb) : "?";
+            limitEl.textContent = (data.memoryLimitMb != null) ? String(data.memoryLimitMb) : "1024";
+            const pct = (data.memory && data.memory.workingSetPctOfLimit != null) ? Number(data.memory.workingSetPctOfLimit) : NaN;
+            wsPctEl.textContent = isFinite(pct) ? String(pct) : "?";
+            if (barEl && isFinite(pct)) {
+                barEl.style.width = Math.max(0, Math.min(100, pct)) + "%";
+            } else if (barEl) {
+                barEl.style.width = "0%";
+            }
+            gcEl.textContent = (data.memory && data.memory.gcHeapMb != null) ? String(data.memory.gcHeapMb) : "?";
+            jsonEl.textContent = lastHealthJson;
+            copyBtn.disabled = false;
+        } catch (e) {
+            statusEl.textContent = "DOWN";
+            statusEl.className = "health-badge bad";
+            jsonEl.textContent = (e && e.message) ? e.message : String(e);
+            if (barEl) barEl.style.width = "0%";
+        }
+    }
+
+    document.getElementById("healthRefresh")?.addEventListener("click", loadHealth);
+    document.getElementById("healthCopy")?.addEventListener("click", async function () {
+        if (!lastHealthJson) return;
+        if (window.DailyTools?.copyToClipboard) {
+            const ok = await window.DailyTools.copyToClipboard(lastHealthJson);
+            if (ok) window.DailyTools.flashButtonText(this, "Copied", 900);
+        } else if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(lastHealthJson);
+        }
+    });
+
+    loadHealth();
+    setInterval(loadHealth, 10000);
+</script>
+

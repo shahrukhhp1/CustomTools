@@ -8,6 +8,14 @@ namespace CustomWebTools
 
             // Add services to the container.
             builder.Services.AddControllersWithViews();
+            builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(o =>
+            {
+                // Allow larger urlencoded form posts for big text/JSON payloads.
+                // (Content is still processed in-memory; controller-level caps apply.)
+                o.ValueLengthLimit = 10_000_000;
+                o.MultipartBodyLengthLimit = 10_000_000;
+                o.MultipartHeadersLengthLimit = 64 * 1024;
+            });
             builder.Services.AddAntiforgery(options =>
             {
                 // default header many clients use for AJAX

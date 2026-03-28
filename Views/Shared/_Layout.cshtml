@@ -9,6 +9,11 @@
     {
         <meta name="description" content="@(ViewData["MetaDescription"] as string)" />
     }
+    @if (!string.IsNullOrWhiteSpace(ViewData["Robots"] as string))
+    {
+        <meta name="robots" content="@(ViewData["Robots"] as string)" />
+        <meta name="googlebot" content="@(ViewData["Robots"] as string)" />
+    }
 
     @{
         var ogTitle = (ViewData["Title"] as string) ?? "DailyTools";
