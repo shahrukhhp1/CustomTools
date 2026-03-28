@@ -25,6 +25,17 @@
     <meta name="twitter:title" content="@ogTitle" />
     <meta name="twitter:description" content="@ogDesc" />
 
+    <script>
+        (function () {
+            try {
+                var stored = localStorage.getItem("dtools-theme");
+                var prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+                var theme = (stored === "dark" || stored === "light") ? stored : (prefersDark ? "dark" : "light");
+                document.documentElement.setAttribute("data-theme", theme);
+            } catch (e) { }
+        })();
+    </script>
+
     @{
         var umamiEnabled = Configuration.GetValue<bool>("Umami:Enabled");
         var umamiScriptUrl = (Configuration["Umami:ScriptUrl"] ?? "").Trim();
@@ -63,19 +74,42 @@
                         <li class="nav-item">
                             <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
                         </li>
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle text-dark" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+
+                        <!-- Desktop: show tools directly in the nav -->
+                        <li class="nav-item d-none d-md-block">
+                            <a class="nav-link text-dark" href="/text-compare">Text compare</a>
+                        </li>
+                        <li class="nav-item d-none d-md-block">
+                            <a class="nav-link text-dark" href="/similarity-score">Similarity</a>
+                        </li>
+                        <li class="nav-item d-none d-md-block">
+                            <a class="nav-link text-dark" href="/json-viewer">JSON viewer</a>
+                        </li>
+                        <li class="nav-item d-none d-md-block">
+                            <a class="nav-link text-dark" href="/character-count">Char count</a>
+                        </li>
+                        <li class="nav-item d-none d-md-block">
+                            <a class="nav-link text-dark" href="/word-number-converter">Word ↔ Number</a>
+                        </li>
+                    </ul>
+                    <div class="d-flex align-items-center gap-2">
+                        <!-- Mobile: single Tools button top-right -->
+                        <div class="dropdown d-md-none">
+                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 Tools
-                            </a>
-                            <ul class="dropdown-menu">
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
                                 <li><a class="dropdown-item" href="/text-compare">Text compare</a></li>
                                 <li><a class="dropdown-item" href="/similarity-score">Similarity score</a></li>
                                 <li><a class="dropdown-item" href="/json-viewer">JSON viewer</a></li>
                                 <li><a class="dropdown-item" href="/character-count">Character count</a></li>
                                 <li><a class="dropdown-item" href="/word-number-converter">Word ↔ Number</a></li>
                             </ul>
-                        </li>
-                    </ul>
+                        </div>
+                        <button id="themeToggle" type="button" class="btn btn-outline-secondary btn-sm" onclick="DailyTools.toggleTheme(this)">
+                            Theme
+                        </button>
+                    </div>
                 </div>
             </div>
         </nav>

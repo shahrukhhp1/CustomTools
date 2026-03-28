@@ -71,6 +71,10 @@ jobs:
         local-dir: ./_build/
         server-dir: ./
         dangerous-clean-slate: false
+        # Keep the server's existing IIS settings (hostingModel, env vars, etc.)
+        exclude: |
+          web.config
+          **/web.config
 
     - name: Bring site back online (delete app_offline.htm)
       shell: pwsh
@@ -87,13 +91,59 @@ jobs:
           $dir = $dir.Trim("/").TrimEnd("/") + "/"
         }
 
-        $baseFtp = "ftp://$server/$dir"
+        $appOffline = "app_offline.htm"
+        $fileUri = "ftp://$server/$dir$appOffline"
 
-        # Try plain FTP delete first; if the host requires TLS, retry with --ssl-reqd.
-        curl -sS --ftp-method nocwd -u "$user`:$pass" "$baseFtp" -Q "DELE app_offline.htm"
-        if ($LASTEXITCODE -ne 0) {
-          curl -sS --ssl-reqd --ftp-method nocwd -u "$user`:$pass" "$baseFtp" -Q "DELE app_offline.htm"
-          if ($LASTEXITCODE -ne 0) {
-            throw "Failed to delete app_offline.htm. You may need to remove it manually via FTP."
+        function Try-DeleteFtpFile([string]$uri, [bool]$enableSsl) {
+          try {
+            $req = [System.Net.FtpWebRequest]::Create($uri)
+            $req.Method = [System.Net.WebRequestMethods+Ftp]::DeleteFile
+            $req.Credentials = New-Object System.Net.NetworkCredential($user, $pass)
+            $req.UsePassive = $true
+            $req.UseBinary = $true
+            $req.KeepAlive = $false
+            $req.Timeout = 15000
+            $req.ReadWriteTimeout = 15000
+            $req.EnableSsl = $enableSsl
+
+            $resp = $req.GetResponse()
+            $resp.Close()
+            return @{ ok = $true; notFound = $false; msg = "deleted" }
+          }
+          catch [System.Net.WebException] {
+            $r = $_.Exception.Response
+            if ($r -is [System.Net.FtpWebResponse]) {
+              $code = $r.StatusCode
+              $desc = $r.StatusDescription
+              $r.Close()
+              if ($code -eq [System.Net.FtpStatusCode]::ActionNotTakenFileUnavailable) {
+                return @{ ok = $false; notFound = $true; msg = $desc }
+              }
+              return @{ ok = $false; notFound = $false; msg = "$code $desc" }
+            }
+            return @{ ok = $false; notFound = $false; msg = $_.Exception.Message }
+          }
+          catch {
+            return @{ ok = $false; notFound = $false; msg = $_.Exception.Message }
           }
         }
+
+        Write-Host "Attempting to delete $fileUri"
+
+        # Small wait helps avoid transient locks when IIS is serving the offline page.
+        Start-Sleep -Seconds 2
+
+        for ($i = 1; $i -le 8; $i++) {
+          $r = Try-DeleteFtpFile -uri $fileUri -enableSsl $false
+          if ($r.ok) { Write-Host "Deleted app_offline.htm (FTP)."; exit 0 }
+          if ($r.notFound) { Write-Host "app_offline.htm not found (already removed)."; exit 0 }
+
+          $r2 = Try-DeleteFtpFile -uri $fileUri -enableSsl $true
+          if ($r2.ok) { Write-Host "Deleted app_offline.htm (FTPS)."; exit 0 }
+          if ($r2.notFound) { Write-Host "app_offline.htm not found (already removed)."; exit 0 }
+
+          Write-Host "Delete attempt $i failed. FTP: $($r.msg) | FTPS: $($r2.msg)"
+          Start-Sleep -Seconds ([Math]::Min(20, 2 * $i))
+        }
+
+        throw "Failed to delete app_offline.htm after retries. You may need to remove it manually via FTP."

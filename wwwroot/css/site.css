@@ -20,3 +20,116 @@ html {
 body {
   margin-bottom: 60px;
 }
+
+:root {
+  --dt-bg: #ffffff;
+  --dt-surface: #ffffff;
+  --dt-surface-2: #f8f9fa;
+  --dt-border: rgba(0, 0, 0, 0.12);
+  --dt-text: #111827;
+  --dt-muted: rgba(0, 0, 0, 0.68);
+  --dt-link: #0d6efd;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --dt-bg: #0b0f14;
+  --dt-surface: #0f172a;
+  --dt-surface-2: #0b1220;
+  --dt-border: rgba(255, 255, 255, 0.14);
+  --dt-text: #e5e7eb;
+  --dt-muted: rgba(229, 231, 235, 0.72);
+  --dt-link: #93c5fd;
+}
+
+body {
+  background: var(--dt-bg);
+  color: var(--dt-text);
+}
+
+html[data-theme="dark"] .text-muted {
+  color: var(--dt-muted) !important;
+}
+
+html[data-theme="dark"] .text-dark {
+  color: var(--dt-text) !important;
+}
+
+html[data-theme="dark"] .border-top,
+html[data-theme="dark"] .border-bottom {
+  border-color: var(--dt-border) !important;
+}
+
+/* Navbar + dropdown */
+html[data-theme="dark"] .navbar {
+  background-color: var(--dt-surface) !important;
+}
+
+html[data-theme="dark"] .navbar-light .navbar-brand,
+html[data-theme="dark"] .navbar-light .navbar-nav .nav-link {
+  color: var(--dt-text) !important;
+}
+
+html[data-theme="dark"] .navbar-light .navbar-toggler {
+  border-color: var(--dt-border) !important;
+}
+
+html[data-theme="dark"] .dropdown-menu {
+  background-color: var(--dt-surface) !important;
+  border-color: var(--dt-border) !important;
+}
+
+html[data-theme="dark"] .dropdown-item {
+  color: var(--dt-text) !important;
+}
+
+html[data-theme="dark"] .dropdown-item:hover,
+html[data-theme="dark"] .dropdown-item:focus {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+/* Buttons */
+html[data-theme="dark"] .btn-outline-secondary {
+  border-color: var(--dt-border) !important;
+  color: var(--dt-text) !important;
+}
+
+html[data-theme="dark"] .btn-outline-secondary:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Inputs */
+html[data-theme="dark"] textarea,
+html[data-theme="dark"] input,
+html[data-theme="dark"] select {
+  background-color: var(--dt-surface-2) !important;
+  color: var(--dt-text) !important;
+  border-color: var(--dt-border) !important;
+}
+
+/* Tool tiles (homepage) */
+html[data-theme="dark"] .tool-tile {
+  background: var(--dt-surface) !important;
+  border-color: var(--dt-border) !important;
+}
+
+html[data-theme="dark"] .tool-tile__desc {
+  color: var(--dt-muted) !important;
+}
+
+/* Hero overrides (homepage) */
+html[data-theme="dark"] .hero {
+  background: radial-gradient(1100px 420px at 20% 0%, rgba(147, 197, 253, 0.18), transparent 65%),
+              radial-gradient(900px 380px at 85% 10%, rgba(16, 185, 129, 0.16), transparent 60%),
+              var(--dt-surface) !important;
+  border-color: var(--dt-border) !important;
+}
+
+html[data-theme="dark"] .hero .lede,
+html[data-theme="dark"] .hero .trust {
+  color: var(--dt-muted) !important;
+}
+
+html[data-theme="dark"] .hero .bullets {
+  color: rgba(229, 231, 235, 0.82) !important;
+}
