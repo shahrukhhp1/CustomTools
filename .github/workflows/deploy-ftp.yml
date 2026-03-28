@@ -18,9 +18,6 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      with:
-        # Needed so git diff can see a base commit
-        fetch-depth: 0
 
     - name: Setup .NET 8 SDK
       uses: actions/setup-dotnet@v4
@@ -30,43 +27,8 @@ jobs:
     - name: Restore NuGet packages
       run: dotnet restore CustomWebTools.sln
 
-    - name: Detect static asset changes (wwwroot)
-      shell: pwsh
-      run: |
-        # Determine a base commit to diff against.
-        # - On push: github.event.before is available
-        # - On workflow_dispatch: fall back to HEAD~1 (if present)
-        $base = "${{ github.event.before }}"
-        if ([string]::IsNullOrWhiteSpace($base) -or $base -eq "0000000000000000000000000000000000000000") {
-          try { $base = (git rev-parse HEAD~1).Trim() } catch { $base = "" }
-        }
-
-        $staticChanged = $true
-        if (-not [string]::IsNullOrWhiteSpace($base)) {
-          $files = (git diff --name-only $base $env:GITHUB_SHA) -split "`n" | ForEach-Object { $_.Trim() } | Where-Object { $_ }
-          $staticChanged = $files | Where-Object { $_ -like "wwwroot/*" } | ForEach-Object { $true } | Select-Object -First 1
-          if ($null -eq $staticChanged) { $staticChanged = $false }
-        }
-
-        if ($staticChanged) {
-          Write-Host "wwwroot changes detected (or base unknown): will deploy static assets."
-          "STATIC_CHANGED=true" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
-        } else {
-          Write-Host "No wwwroot changes detected: will skip deploying static assets."
-          "STATIC_CHANGED=false" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
-        }
-
     - name: Build and Publish
       run: dotnet publish CustomWebTools.sln -c Release -o ./_build --no-restore
-
-    - name: Skip static assets when unchanged
-      if: env.STATIC_CHANGED == 'false'
-      shell: pwsh
-      run: |
-        if (Test-Path "./_build/wwwroot") {
-          Remove-Item -Path "./_build/wwwroot" -Recurse -Force
-          Write-Host "Removed _build/wwwroot (static assets unchanged)."
-        }
 
     - name: Put site in maintenance mode (app_offline.htm)
       shell: pwsh
@@ -119,6 +81,9 @@ jobs:
         # app_offline.htm is managed by dedicated steps above
         exclude: |
           app_offline.htm
+          # Don’t redeploy vendor assets every time
+          wwwroot/lib/**
+          **/wwwroot/lib/**
 
     - name: Bring site back online (delete app_offline.htm)
       shell: pwsh
