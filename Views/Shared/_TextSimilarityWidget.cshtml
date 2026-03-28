@@ -22,6 +22,11 @@
         flex-wrap: wrap;
     }
 
+    .sim-intro {
+        margin: 0 0 12px 0;
+        color: rgba(0,0,0,0.70);
+    }
+
     .sim-options {
         display: flex;
         gap: 16px;
@@ -81,6 +86,29 @@
     .sim-score {
         margin-top: 8px;
         font-weight: 700;
+        font-size: 1.3rem;
+    }
+
+    .sim-explain {
+        margin-top: 6px;
+        color: rgba(0,0,0,0.68);
+    }
+
+    .sim-copyRow {
+        margin-top: 10px;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .sim-copyText {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        font-size: 12px;
+        background: rgba(0,0,0,0.03);
+        border: 1px solid rgba(0,0,0,0.10);
+        border-radius: 10px;
+        padding: 6px 10px;
     }
 
     .sim-details {
@@ -109,6 +137,35 @@
 <script>
     function clamp01(x) { return Math.max(0, Math.min(1, x)); }
 
+    function buildExplainText() {
+        const opts = [];
+        if (document.getElementById("simRemoveDiacritics").checked) opts.push("diacritics removed");
+        if (document.getElementById("simIgnoreCase").checked) opts.push("case ignored");
+        if (document.getElementById("simStripPunctuation").checked) opts.push("punctuation stripped");
+        if (document.getElementById("simCollapseWhitespace").checked) opts.push("extra whitespace ignored");
+        if (document.getElementById("simRemoveStopwords").checked) opts.push("stopwords removed");
+
+        const ws = document.getElementById("simWordShingleSize").value || "3";
+        const cg = document.getElementById("simCharGramSize").value || "5";
+
+        const norm = opts.length ? opts.join(", ") : "no normalization";
+        return "Based on word shingles (w-" + ws + "), character n-grams (c-" + cg + "), and word overlap; normalization: " + norm + ".";
+    }
+
+    async function copySimilarityText() {
+        const text = document.getElementById("simCopyText")?.textContent ?? "";
+        if (!text) return;
+        if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(text);
+            const btn = document.getElementById("simCopyBtn");
+            if (btn) {
+                const prev = btn.textContent;
+                btn.textContent = "Copied";
+                setTimeout(() => { btn.textContent = prev; }, 900);
+            }
+        }
+    }
+
     async function compareSimilarity() {
         const text1 = document.getElementById("simText1").value;
         const text2 = document.getElementById("simText2").value;
@@ -127,14 +184,18 @@
         form.set("charGramSize", document.getElementById("simCharGramSize").value || "5");
 
         const scoreEl = document.getElementById("simScore");
+        const explainEl = document.getElementById("simExplain");
         const detailsEl = document.getElementById("simDetails");
         const warnEl = document.getElementById("simWarn");
         const barFill = document.getElementById("simBarFill");
+        const copyTextEl = document.getElementById("simCopyText");
 
         warnEl.style.display = "none";
         warnEl.innerText = "";
         scoreEl.innerText = "Calculating…";
+        explainEl.innerText = "";
         detailsEl.innerText = "";
+        copyTextEl.innerText = "";
         barFill.style.width = "0%";
 
         const resp = await fetch("/Home/Similarity", {
@@ -153,16 +214,19 @@
 
         const data = await resp.json();
         const combined = clamp01((data.combinedScore || 0));
-        barFill.style.width = Math.round(combined * 100) + "%";
+        const pct = combined * 100;
+        const pctText = pct.toFixed(1);
+        barFill.style.width = Math.round(pct) + "%";
 
-        scoreEl.innerText =
-            "Similarity: " + Math.round(combined * 100) + "% (combined)";
+        scoreEl.innerText = "Similarity: " + pctText + "%";
+        explainEl.innerText = buildExplainText();
+        copyTextEl.innerText = "Similarity: " + pctText + "%";
 
         const lines = [];
-        lines.push("Combined:        " + Math.round((data.combinedScore || 0) * 100) + "%");
-        lines.push("Cosine (words):  " + Math.round((data.cosineScore || 0) * 100) + "%");
-        lines.push("Jaccard (w-" + (data.wordShingleSize || 3) + "):  " + Math.round((data.wordShingleJaccard || 0) * 100) + "%");
-        lines.push("Jaccard (c-" + (data.charGramSize || 5) + "):  " + Math.round((data.charGramJaccard || 0) * 100) + "%");
+        lines.push("Combined:        " + ((data.combinedScore || 0) * 100).toFixed(1) + "%");
+        lines.push("Cosine (words):  " + ((data.cosineScore || 0) * 100).toFixed(1) + "%");
+        lines.push("Jaccard (w-" + (data.wordShingleSize || 3) + "):  " + ((data.wordShingleJaccard || 0) * 100).toFixed(1) + "%");
+        lines.push("Jaccard (c-" + (data.charGramSize || 5) + "):  " + ((data.charGramJaccard || 0) * 100).toFixed(1) + "%");
         lines.push("");
         lines.push("Tokens A/B:      " + (data.tokenCountA ?? "?") + " / " + (data.tokenCountB ?? "?"));
         lines.push("Unique A/B:      " + (data.uniqueTokenCountA ?? "?") + " / " + (data.uniqueTokenCountB ?? "?"));
@@ -183,6 +247,10 @@
 
 <div class="similarity-page">
     <h1>@title</h1>
+
+    <div class="sim-intro">
+        Get a similarity percentage between two texts. Adjust normalization options for more accurate comparison of content vs exact strings.
+    </div>
 
     <div class="sim-controls">
         <button id="simCompareBtn" onclick="compareSimilarity()">Similarity score</button>
@@ -206,6 +274,18 @@
     <div class="sim-result">
         <div class="sim-bar"><div id="simBarFill"></div></div>
         <div id="simScore" class="sim-score"></div>
+        <div id="simExplain" class="sim-explain"></div>
+        <div class="sim-copyRow">
+            <button id="simCopyBtn" type="button" class="btn btn-outline-secondary btn-sm" onclick="copySimilarityText()">Copy result</button>
+            <span id="simCopyText" class="sim-copyText"></span>
+            <details>
+                <summary>What are shingles and char grams?</summary>
+                <div class="mt-2 text-muted">
+                    <div><strong>Word shingles</strong> are consecutive word sequences (e.g., w-3 = 3-word phrases). They catch copy-with-small-edits.</div>
+                    <div class="mt-1"><strong>Char grams</strong> are consecutive character sequences (e.g., c-5 = 5-char chunks). They help detect small formatting/typo changes.</div>
+                </div>
+            </details>
+        </div>
         <div id="simWarn" class="sim-warn" style="display:none;"></div>
         <div id="simDetails" class="sim-details"></div>
     </div>

@@ -1,0 +1,31 @@
+@{
+    // Titles + meta are set in ToolsController
+}
+
+<style>
+    .count-page h1 { display: none; }
+</style>
+
+<div class="mx-auto" style="max-width: 1100px;">
+    <h1 class="mb-2">Character counter</h1>
+    <p class="text-muted mb-3">
+        Count characters, words, and lines instantly. Use presets for Tweet/X and common SEO metadata length guidance.
+    </p>
+
+    @await Html.PartialAsync("_CharCountWidget", "Character count")
+
+    <hr class="my-4" />
+
+    <h2 class="h5">FAQs</h2>
+    <div class="d-grid gap-2">
+        <details>
+            <summary class="fw-semibold">Which count does SEO usually care about?</summary>
+            <div class="text-muted mt-2">Typically character counts including spaces. The presets in this tool use that measure.</div>
+        </details>
+        <details>
+            <summary class="fw-semibold">Need to clean or inspect structured text?</summary>
+            <div class="text-muted mt-2">Try the <a href="/json-viewer">JSON viewer</a> for payloads or <a href="/text-compare">Text compare</a> for diffs.</div>
+        </details>
+    </div>
+</div>
+

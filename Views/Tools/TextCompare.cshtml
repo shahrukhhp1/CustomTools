@@ -1,0 +1,43 @@
+@{
+    // Titles + meta are set in ToolsController
+}
+
+<style>
+    /* Page heading replaces widget heading */
+    .compare-page h1 { display: none; }
+</style>
+
+<div class="mx-auto" style="max-width: 1100px;">
+    <h1 class="mb-2">Text comparison tool</h1>
+    <p class="text-muted mb-3">
+        Compare two versions of text and highlight exactly what changed. Great for API responses, configs, drafts, and logs.
+    </p>
+
+    @await Html.PartialAsync("_TextCompareWidget", "String or text comparison")
+
+    <hr class="my-4" />
+
+    <h2 class="h5">How to use</h2>
+    <ol class="text-muted">
+        <li>Paste the original text into <strong>Version A</strong>.</li>
+        <li>Paste the updated text into <strong>Version B</strong>.</li>
+        <li>Click <strong>Compare</strong> to see highlights and the “changed lines” summary.</li>
+    </ol>
+
+    <h2 class="h5 mt-4">FAQs</h2>
+    <div class="d-grid gap-2">
+        <details>
+            <summary class="fw-semibold">Is my data stored?</summary>
+            <div class="text-muted mt-2">This tool sends the text to the server to compute a diff. It’s designed not to persist your pasted content.</div>
+        </details>
+        <details>
+            <summary class="fw-semibold">What does “changed lines” mean?</summary>
+            <div class="text-muted mt-2">It counts how many line positions differ between A and B. It’s a quick summary, not a semantic measure.</div>
+        </details>
+        <details>
+            <summary class="fw-semibold">Looking for similarity instead of exact diffs?</summary>
+            <div class="text-muted mt-2">Try the <a href="/similarity-score">Similarity score</a> tool.</div>
+        </details>
+    </div>
+</div>
+

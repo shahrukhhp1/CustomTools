@@ -1,6 +1,33 @@
-﻿@{
+@{
     ViewData["Title"] = "Privacy Policy";
 }
-<h1>@ViewData["Title"]</h1>
+<div class="mx-auto" style="max-width: 920px;">
+    <h1 class="mb-3">@ViewData["Title"]</h1>
 
-<p>Use this page to detail your site's privacy policy.</p>
+    <p class="lead">
+        DailyTools is built to be privacy-friendly. Here’s what happens when you use the tools on this site.
+    </p>
+
+    <h2 class="h5 mt-4">Do you store the text/JSON I paste?</h2>
+    <p>
+        The tools are designed to work without saving your pasted content to a database.
+        Some tools run server-side (for example: diffing text, similarity scoring, JSON formatting/repair), which means your input is sent to the server
+        to generate a result. We do not intentionally persist that input after processing.
+    </p>
+
+    <h2 class="h5 mt-4">Do you log my input?</h2>
+    <p>
+        We do not intentionally log the content you paste into the tools. However, like most websites, the server may keep standard operational logs
+        (for example: request timestamps, status codes, and error messages). Avoid pasting secrets.
+    </p>
+
+    <h2 class="h5 mt-4">Tracking &amp; analytics</h2>
+    <p>
+        The site does not require an account or sign-up. If analytics are added in the future, this page will be updated.
+    </p>
+
+    <h2 class="h5 mt-4">Contact</h2>
+    <p class="mb-0">
+        If you have privacy questions, use the <a asp-controller="Home" asp-action="Contact">Contact</a> page.
+    </p>
+</div>

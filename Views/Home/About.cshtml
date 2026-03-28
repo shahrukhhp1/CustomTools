@@ -1,0 +1,30 @@
+@{
+    ViewData["Title"] = "About";
+}
+
+<div class="mx-auto" style="max-width: 920px;">
+    <h1 class="mb-3">@ViewData["Title"]</h1>
+
+    <p class="lead">
+        DailyTools is a small collection of fast, no-signup utilities for developers, writers, and product teams.
+        It’s built to be simple, dependable, and easy to bookmark.
+    </p>
+
+    <h2 class="h5 mt-4">What it includes</h2>
+    <ul>
+        <li>Text comparison and similarity scoring</li>
+        <li>JSON viewer + best-effort repair/structuring</li>
+        <li>Character counts and word/number conversion</li>
+    </ul>
+
+    <h2 class="h5 mt-4">Safety &amp; privacy (short version)</h2>
+    <p>
+        Some tools process the text you paste by sending it to the server for comparison/formatting.
+        The site is designed to avoid storing your pasted content and does not intentionally log it.
+        Don’t paste secrets you can’t afford to expose.
+    </p>
+
+    <p class="mb-0">
+        For details, see the <a asp-controller="Home" asp-action="Privacy">Privacy</a> page.
+    </p>
+</div>

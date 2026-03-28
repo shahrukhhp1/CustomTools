@@ -1,95 +1,152 @@
 @{
-    ViewData["Title"] = "String or text comparison";
+    ViewData["Title"] = "Fast browser-based text & JSON tools – DailyTools";
+    ViewData["MetaDescription"] = "Free, privacy-friendly utilities for comparing, inspecting, and cleaning text & JSON. No sign-up.";
 }
-<div class="text-center my-3">
-    <button id="showCompareWidget" type="button" class="btn btn-outline-primary me-2">
-        Comparison tool
-    </button>
-    <button id="showSimilarityWidget" type="button" class="btn btn-outline-primary me-2">
-        Similarity score
-    </button>
-    <button id="showJsonViewerWidget" type="button" class="btn btn-outline-primary me-2">
-        JSON viewer
-    </button>
-    <button id="showCharCountWidget" type="button" class="btn btn-outline-primary me-2">
-        Character count
-    </button>
-    <button id="showWordToNumberWidget" type="button" class="btn btn-outline-primary">
-        Word to number
-    </button>
+<style>
+    .hero {
+        padding: 28px;
+        border: 1px solid rgba(0,0,0,0.08);
+        border-radius: 18px;
+        background: radial-gradient(1100px 420px at 20% 0%, rgba(13,110,253,0.12), transparent 65%),
+                    radial-gradient(900px 380px at 85% 10%, rgba(25,135,84,0.10), transparent 60%),
+                    #fff;
+    }
+
+    .hero h1 {
+        letter-spacing: -0.02em;
+    }
+
+    .hero .lede {
+        max-width: 72ch;
+        color: rgba(0,0,0,0.70);
+    }
+
+    .hero .bullets {
+        margin: 14px 0 0 0;
+        padding-left: 18px;
+        color: rgba(0,0,0,0.78);
+    }
+
+    .hero .trust {
+        margin-top: 12px;
+        color: rgba(0,0,0,0.58);
+        font-size: 0.95rem;
+    }
+
+    .tools-grid {
+        margin-top: 18px;
+        display: grid;
+        grid-template-columns: repeat(1, minmax(0, 1fr));
+        gap: 14px;
+    }
+
+    @@media (min-width: 768px) {
+        .tools-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    .tool-tile {
+        border: 1px solid rgba(0,0,0,0.08);
+        border-radius: 16px;
+        background: #fff;
+        padding: 16px 16px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.04);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .tool-tile__title {
+        font-weight: 900;
+        letter-spacing: -0.01em;
+        margin: 0;
+    }
+
+    .tool-tile__desc {
+        color: rgba(0,0,0,0.68);
+        margin: 0;
+    }
+</style>
+
+<div class="hero my-3">
+    <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3">
+        <div>
+            <h1 class="display-6 fw-semibold mb-2">
+                Fast browser-based tools for comparing, inspecting, and cleaning text &amp; JSON
+            </h1>
+            <div class="lede">
+                Free, privacy-friendly utilities for developers, writers, and product teams. No sign-up, no tracking of your input data.
+            </div>
+            <ul class="bullets">
+                <li>Text comparison &amp; similarity scoring</li>
+                <li>JSON viewer &amp; repair</li>
+                <li>Character count &amp; word/number converter</li>
+            </ul>
+            <div class="trust">
+                Your input stays in your session — tools process what you paste so you can get answers quickly and move on.
+            </div>
+        </div>
+        <div class="flex-shrink-0">
+            <button id="jumpToTools" type="button" class="btn btn-primary">
+                Explore tools
+            </button>
+        </div>
+    </div>
 </div>
 
-<div id="compareWidgetHost" style="display:none;">
-    @await Html.PartialAsync("_TextCompareWidget", (ViewData["Title"] as string) ?? "String or text comparison")
-</div>
-
-<div id="similarityWidgetHost" style="display:none;">
-    @await Html.PartialAsync("_TextSimilarityWidget", "Text similarity")
-</div>
-
-<div id="jsonViewerWidgetHost" style="display:none;">
-    @await Html.PartialAsync("_JsonViewerWidget", "JSON viewer")
-</div>
-
-<div id="charCountWidgetHost" style="display:none;">
-    @await Html.PartialAsync("_CharCountWidget", "Character count")
-</div>
-
-<div id="wordToNumberWidgetHost" style="display:none;">
-    @await Html.PartialAsync("_WordToNumberWidget", "Word to number")
+<div id="toolsSection" class="tools-grid">
+    <div class="tool-tile">
+        <div class="tool-tile__title">Text compare</div>
+        <div class="tool-tile__desc">Highlight exactly what changed between Version A and Version B.</div>
+        <div>
+            <a class="btn btn-primary btn-sm" href="/text-compare">Open tool</a>
+            <a class="btn btn-outline-secondary btn-sm" href="/similarity-score">Try similarity</a>
+        </div>
+    </div>
+    <div class="tool-tile">
+        <div class="tool-tile__title">Similarity score</div>
+        <div class="tool-tile__desc">Get a similarity percentage with normalization + shingles/grams.</div>
+        <div>
+            <a class="btn btn-primary btn-sm" href="/similarity-score">Open tool</a>
+            <a class="btn btn-outline-secondary btn-sm" href="/text-compare">Try compare</a>
+        </div>
+    </div>
+    <div class="tool-tile">
+        <div class="tool-tile__title">JSON viewer</div>
+        <div class="tool-tile__desc">Format, validate, copy/download — and try best-effort repair for broken JSON.</div>
+        <div>
+            <a class="btn btn-primary btn-sm" href="/json-viewer">Open tool</a>
+            <a class="btn btn-outline-secondary btn-sm" href="/text-compare">Compare payloads</a>
+        </div>
+    </div>
+    <div class="tool-tile">
+        <div class="tool-tile__title">Character count</div>
+        <div class="tool-tile__desc">Chars / no-spaces / words / lines + presets for Tweet/X and meta tags.</div>
+        <div>
+            <a class="btn btn-primary btn-sm" href="/character-count">Open tool</a>
+            <a class="btn btn-outline-secondary btn-sm" href="/word-to-number">Word ↔ Number</a>
+        </div>
+    </div>
+    <div class="tool-tile">
+        <div class="tool-tile__title">Word ↔ Number</div>
+        <div class="tool-tile__desc">English-only converter (short-scale) with negatives and decimals.</div>
+        <div>
+            <a class="btn btn-primary btn-sm" href="/word-to-number">Open tool</a>
+            <a class="btn btn-outline-secondary btn-sm" href="/character-count">Count text</a>
+        </div>
+    </div>
 </div>
 
 <script>
     (function () {
-        var btnCompare = document.getElementById("showCompareWidget");
-        var btnSimilarity = document.getElementById("showSimilarityWidget");
-        var btnJsonViewer = document.getElementById("showJsonViewerWidget");
-        var btnCount = document.getElementById("showCharCountWidget");
-        var btnWordToNumber = document.getElementById("showWordToNumberWidget");
-        var hostCompare = document.getElementById("compareWidgetHost");
-        var hostSimilarity = document.getElementById("similarityWidgetHost");
-        var hostJsonViewer = document.getElementById("jsonViewerWidgetHost");
-        var hostCount = document.getElementById("charCountWidgetHost");
-        var hostWordToNumber = document.getElementById("wordToNumberWidgetHost");
-        if (!btnCompare || !btnSimilarity || !btnJsonViewer || !btnCount || !btnWordToNumber || !hostCompare || !hostSimilarity || !hostJsonViewer || !hostCount || !hostWordToNumber) return;
+        var jumpToTools = document.getElementById("jumpToTools");
+        var toolsSection = document.getElementById("toolsSection");
 
-        function setActive(btn, active) {
-            if (active) {
-                btn.classList.remove("btn-outline-primary");
-                btn.classList.add("btn-primary");
-            } else {
-                btn.classList.remove("btn-primary");
-                btn.classList.add("btn-outline-primary");
-            }
+        if (jumpToTools && toolsSection) {
+            jumpToTools.addEventListener("click", function () {
+                toolsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+            });
         }
-
-        function show(which) {
-            hostCompare.style.display = which === "compare" ? "block" : "none";
-            hostSimilarity.style.display = which === "similarity" ? "block" : "none";
-            hostJsonViewer.style.display = which === "json" ? "block" : "none";
-            hostCount.style.display = which === "count" ? "block" : "none";
-            hostWordToNumber.style.display = which === "wtn" ? "block" : "none";
-
-            // Selected button = primary, other = white (outline)
-            setActive(btnCompare, which === "compare");
-            setActive(btnSimilarity, which === "similarity");
-            setActive(btnJsonViewer, which === "json");
-            setActive(btnCount, which === "count");
-            setActive(btnWordToNumber, which === "wtn");
-
-            var target =
-                which === "compare" ? hostCompare :
-                which === "similarity" ? hostSimilarity :
-                which === "json" ? hostJsonViewer :
-                which === "count" ? hostCount :
-                hostWordToNumber;
-            target.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
-
-        btnCompare.addEventListener("click", function () { show("compare"); });
-        btnSimilarity.addEventListener("click", function () { show("similarity"); });
-        btnJsonViewer.addEventListener("click", function () { show("json"); });
-        btnCount.addEventListener("click", function () { show("count"); });
-        btnWordToNumber.addEventListener("click", function () { show("wtn"); });
     })();
 </script>

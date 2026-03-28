@@ -19,6 +19,15 @@
         justify-content: center;
         gap: 10px;
         margin: 0 0 16px 0;
+        flex-wrap: wrap;
+    }
+
+    .count-presets {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin: 0 0 10px 0;
     }
 
     #countText {
@@ -43,9 +52,50 @@
         border-radius: 8px;
         background: #f1f3f5;
     }
+
+    .presetStatus {
+        margin-top: 10px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid rgba(0,0,0,0.10);
+        background: rgba(0,0,0,0.02);
+        font-weight: 700;
+        display: none;
+        white-space: pre-wrap;
+    }
+
+    .presetOk {
+        border-color: rgba(25,135,84,0.35);
+        background: rgba(25,135,84,0.10);
+        color: #146c43;
+    }
+
+    .presetWarn {
+        border-color: rgba(255,193,7,0.45);
+        background: rgba(255,193,7,0.18);
+        color: #8a6d00;
+    }
+
+    .presetBad {
+        border-color: rgba(220,53,69,0.35);
+        background: rgba(220,53,69,0.10);
+        color: #b02a37;
+    }
 </style>
 
 <script>
+    let activePreset = null;
+
+    function setPreset(presetId) {
+        activePreset = presetId || null;
+        document.querySelectorAll("[data-preset]").forEach(function (b) {
+            const on = (b.getAttribute("data-preset") === activePreset);
+            b.classList.toggle("btn-primary", on);
+            b.classList.toggle("btn-outline-primary", !on);
+        });
+        updateCharCount();
+    }
+
     function updateCharCount() {
         const text = document.getElementById("countText")?.value ?? "";
         const chars = text.length;
@@ -57,6 +107,47 @@
         document.getElementById("statCharsNoSpaces").textContent = String(charsNoSpaces);
         document.getElementById("statWords").textContent = String(words);
         document.getElementById("statLines").textContent = String(lines);
+
+        const box = document.getElementById("presetStatus");
+        if (!box) return;
+        if (!activePreset) {
+            box.style.display = "none";
+            box.className = "presetStatus";
+            box.textContent = "";
+            return;
+        }
+
+        const c = chars; // presets are usually based on characters including spaces
+
+        function setBox(kind, text) {
+            box.style.display = "block";
+            box.className = "presetStatus " + kind;
+            box.textContent = text;
+        }
+
+        if (activePreset === "tweet") {
+            const limit = 280;
+            if (c <= limit) setBox("presetOk", "Tweet/X limit: " + c + " / " + limit + " (under limit)");
+            else setBox("presetBad", "Tweet/X limit: " + c + " / " + limit + " (over limit)");
+            return;
+        }
+
+        if (activePreset === "metaTitle") {
+            // Typical: 50–60 chars. We'll warn above 60 and go red above 70.
+            if (c <= 60) setBox("presetOk", "Meta title: " + c + " chars (typical 50–60)");
+            else if (c <= 70) setBox("presetWarn", "Meta title: " + c + " chars (a bit long; typical 50–60)");
+            else setBox("presetBad", "Meta title: " + c + " chars (too long; typical 50–60)");
+            return;
+        }
+
+        if (activePreset === "metaDesc") {
+            // Typical: ~155 chars. We'll warn above 155 and go red above 170.
+            const typical = 155;
+            if (c <= typical) setBox("presetOk", "Meta description: " + c + " / " + typical + " (under typical)");
+            else if (c <= 170) setBox("presetWarn", "Meta description: " + c + " chars (a bit long; ~155 typical)");
+            else setBox("presetBad", "Meta description: " + c + " chars (too long; ~155 typical)");
+            return;
+        }
     }
 
     function clearCharCount() {
@@ -70,6 +161,13 @@
 <div class="count-page">
     <h1>@title</h1>
 
+    <div class="count-presets">
+        <button type="button" class="btn btn-outline-primary btn-sm" data-preset="tweet" onclick="setPreset('tweet')">Tweet/X (280)</button>
+        <button type="button" class="btn btn-outline-primary btn-sm" data-preset="metaTitle" onclick="setPreset('metaTitle')">Meta title (50–60)</button>
+        <button type="button" class="btn btn-outline-primary btn-sm" data-preset="metaDesc" onclick="setPreset('metaDesc')">Meta description (~155)</button>
+        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setPreset(null)">Clear preset</button>
+    </div>
+
     <div class="count-controls">
         <button type="button" class="btn btn-secondary" onclick="clearCharCount()">Clear</button>
     </div>
@@ -82,6 +180,8 @@
         <span class="statBox">Words: <span id="statWords">0</span></span>
         <span class="statBox">Lines: <span id="statLines">0</span></span>
     </div>
+
+    <div id="presetStatus" class="presetStatus"></div>
 </div>
 
 <script>

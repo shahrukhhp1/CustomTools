@@ -1,0 +1,44 @@
+@{
+    // Titles + meta are set in ToolsController
+}
+
+<style>
+    .json-viewer h1 { display: none; }
+</style>
+
+<div class="mx-auto" style="max-width: 1100px;">
+    <h1 class="mb-2">JSON viewer &amp; formatter</h1>
+    <p class="text-muted mb-3">
+        Format &amp; validate JSON. Paste your JSON and we’ll pretty-print it, help you repair common issues, and let you copy/download the result.
+    </p>
+
+    @await Html.PartialAsync("_JsonViewerWidget", "JSON viewer")
+
+    <hr class="my-4" />
+
+    <h2 class="h5">How to use</h2>
+    <ol class="text-muted">
+        <li>Paste JSON into the input box.</li>
+        <li>Click <strong>Format</strong> to validate and pretty-print.</li>
+        <li>If it’s broken, enable <strong>Try to repair invalid JSON</strong> and try again.</li>
+    </ol>
+
+    <h2 class="h5 mt-4">FAQs</h2>
+    <div class="d-grid gap-2">
+        <details>
+            <summary class="fw-semibold">Is “repair” safe?</summary>
+            <div class="text-muted mt-2">
+                Repair is best-effort. It may remove comments/trailing commas or adjust quotes/keys so parsing succeeds. Always review the output.
+            </div>
+        </details>
+        <details>
+            <summary class="fw-semibold">Is my JSON stored?</summary>
+            <div class="text-muted mt-2">JSON is sent to the server to format/repair. The site is designed not to persist your pasted content.</div>
+        </details>
+        <details>
+            <summary class="fw-semibold">Need to compare two JSON payloads?</summary>
+            <div class="text-muted mt-2">Try <a href="/text-compare">Text compare</a> or <a href="/similarity-score">Similarity score</a>.</div>
+        </details>
+    </div>
+</div>
+

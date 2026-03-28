@@ -27,6 +27,16 @@ namespace CustomWebTools.Controllers
             return View();
         }
 
+        public IActionResult About()
+        {
+            return View();
+        }
+
+        public IActionResult Contact()
+        {
+            return View();
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public IActionResult Compare([FromForm] string text1, [FromForm] string text2)
@@ -40,6 +50,17 @@ namespace CustomWebTools.Controllers
 
             var l1lines = text1.Split('\n');
             var l2lines = text2.Split('\n');
+
+            var totalLines = Math.Max(l1lines.Length, l2lines.Length);
+            var changedLines = 0;
+            for (var i = 0; i < totalLines; i++)
+            {
+                var a = i < l1lines.Length ? l1lines[i] : "";
+                var b = i < l2lines.Length ? l2lines[i] : "";
+                if (!string.Equals(a, b, StringComparison.Ordinal)) changedLines++;
+            }
+            var sameLines = Math.Max(0, totalLines - changedLines);
+            var lineSimilarity = totalLines == 0 ? 1.0 : (double)sameLines / totalLines;
 
             static void AppendHtmlEncoded(StringBuilder sb, ReadOnlySpan<char> value)
             {
@@ -277,6 +298,14 @@ namespace CustomWebTools.Controllers
             }
 
             var sb = new StringBuilder(capacity: Math.Min(1024 * 1024, Math.Max(text1.Length, 1024)));
+            sb.Append("<div class='compareStats'>Changed lines: ")
+              .Append(changedLines)
+              .Append(" / ")
+              .Append(totalLines)
+              .Append(" &nbsp;·&nbsp; Similarity (rough): ")
+              .Append(Math.Round(lineSimilarity * 100))
+              .Append("%</div><br/>");
+
             for (var lineIndex = 0; lineIndex < l1lines.Length; lineIndex++)
             {
                 var l1line = l1lines[lineIndex];
@@ -595,13 +624,19 @@ namespace CustomWebTools.Controllers
             input = input.TrimStart('\uFEFF'); // BOM, if present
 
             // 1) Strict parse
-            if (TryFormatStrict(input, out var strictFormatted, out var strictErr))
+            if (TryFormatStrict(input, out var strictFormatted, out var strictErr, out var strictLine, out var strictCol))
             {
                 return Json(new
                 {
+                    statusKind = "valid",
                     statusText = "Valid JSON (formatted).",
+                    isValidJson = true,
+                    repaired = false,
                     displayText = strictFormatted,
-                    warnings
+                    warnings,
+                    errorMessage = (string?)null,
+                    errorLine = (int?)null,
+                    errorColumn = (int?)null
                 });
             }
 
@@ -611,13 +646,20 @@ namespace CustomWebTools.Controllers
                 warnings.AddRange(structWarnings);
                 return Json(new
                 {
+                    statusKind = "invalid-structured",
                     statusText = "JSON is not valid (structured view).",
+                    isValidJson = false,
+                    repaired = false,
                     displayText = structured,
                     warnings = new[]
                     {
                         "Tried to structure, but JSON is not valid.",
                         strictErr
                     }.Where(x => !string.IsNullOrWhiteSpace(x)).Concat(warnings).ToArray()
+                    ,
+                    errorMessage = strictErr,
+                    errorLine = strictLine,
+                    errorColumn = strictCol
                 });
             }
 
@@ -625,16 +667,19 @@ namespace CustomWebTools.Controllers
             var repaired = RepairJsonish(input, out var repairNotes);
             warnings.AddRange(repairNotes);
 
-            if (TryFormatStrict(repaired, out var repairedFormatted, out var repairedErr))
+            if (TryFormatStrict(repaired, out var repairedFormatted, out var repairedErr, out var repairedLine, out var repairedCol))
             {
                 return Json(new
                 {
+                    statusKind = "repaired",
                     statusText = "Repaired JSON (formatted).",
+                    isValidJson = true,
+                    repaired = true,
                     displayText = repairedFormatted,
-                    warnings = new[]
-                    {
-                        "Auto-fixed common issues (review output)."
-                    }.Concat(warnings).ToArray()
+                    warnings = new[] { "Auto-fixed common issues (review output)." }.Concat(warnings).ToArray(),
+                    errorMessage = (string?)null,
+                    errorLine = (int?)null,
+                    errorColumn = (int?)null
                 });
             }
 
@@ -645,18 +690,27 @@ namespace CustomWebTools.Controllers
 
             return Json(new
             {
+                statusKind = "invalid-partial",
                 statusText = "Tried to fix and structure but JSON is not valid.",
+                isValidJson = false,
+                repaired = false,
                 displayText = structuredFallback,
                 warnings = new[]
                 {
                     "Tried to fix and structure but JSON is not valid."
                 }.Where(x => !string.IsNullOrWhiteSpace(x)).Concat(warnings).ToArray()
+                ,
+                errorMessage = repairedErr,
+                errorLine = repairedLine,
+                errorColumn = repairedCol
             });
 
-            static bool TryFormatStrict(string json, out string formatted, out string error)
+            static bool TryFormatStrict(string json, out string formatted, out string error, out int? errorLine, out int? errorColumn)
             {
                 formatted = "";
                 error = "";
+                errorLine = null;
+                errorColumn = null;
                 try
                 {
                     using var doc = JsonDocument.Parse(json, new JsonDocumentOptions
@@ -669,6 +723,13 @@ namespace CustomWebTools.Controllers
                         WriteIndented = true
                     });
                     return true;
+                }
+                catch (JsonException jex)
+                {
+                    error = jex.Message;
+                    if (jex.LineNumber.HasValue) errorLine = (int)jex.LineNumber.Value + 1;
+                    if (jex.BytePositionInLine.HasValue) errorColumn = (int)jex.BytePositionInLine.Value + 1;
+                    return false;
                 }
                 catch (Exception ex)
                 {

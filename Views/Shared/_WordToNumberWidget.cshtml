@@ -14,6 +14,21 @@
         margin: 0 0 12px 0;
     }
 
+    .wtn-intro {
+        margin: 0 0 12px 0;
+        color: rgba(0,0,0,0.70);
+    }
+
+    .wtn-help {
+        margin: 10px 0 0 0;
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid rgba(0,0,0,0.10);
+        background: rgba(0,0,0,0.02);
+        color: rgba(0,0,0,0.70);
+        font-size: 0.95rem;
+    }
+
     .wtn-controls {
         display: flex;
         justify-content: center;
@@ -299,6 +314,10 @@
 <div class="wtn-page">
     <h1>@title</h1>
 
+    <div class="wtn-intro">
+        English-only conversion using the short-scale system (thousand, million, billion, trillion). Supports negatives and decimals.
+    </div>
+
     <div class="wtn-mode">
         <label>
             <input type="radio" name="wtnMode" value="w2n" checked onchange="wtnConvert()" />
@@ -316,11 +335,15 @@
         <button type="button" class="btn btn-outline-secondary" onclick="wtnCopy()">Copy result</button>
     </div>
 
-    <textarea id="wtnInput" placeholder="Word → Number: one hundred twenty three&#10;Number → Word: 12345&#10;Supports: minus/negative, point/decimals" oninput="wtnConvert()"></textarea>
+    <textarea id="wtnInput" placeholder="Examples&#10;Word → Number: one thousand five hundred twenty-three&#10;Number → Word: 1,523&#10;&#10;Also supports: minus/negative, point/decimals" oninput="wtnConvert()"></textarea>
 
     <div id="wtnOutputWrap">
         <div id="wtnOutput"></div>
         <div id="wtnError"></div>
+    </div>
+
+    <div class="wtn-help">
+        Tip: For large numbers, use: thousand / million / billion / trillion. If something doesn’t parse, it’s usually due to unsupported words or ordering.
     </div>
 </div>
 

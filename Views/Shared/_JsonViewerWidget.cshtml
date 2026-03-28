@@ -22,6 +22,11 @@
         margin: 0 0 12px 0;
     }
 
+    .json-intro {
+        margin: 0 0 12px 0;
+        color: rgba(0,0,0,0.70);
+    }
+
     .json-options {
         display: flex;
         gap: 16px;
@@ -56,6 +61,10 @@
         margin-top: 12px;
         font-weight: 700;
     }
+
+    .json-status.ok { color: #146c43; }
+    .json-status.bad { color: #b02a37; }
+    .json-status.info { color: rgba(0,0,0,0.70); }
 
     .json-warn {
         margin-top: 10px;
@@ -92,6 +101,9 @@
 @Html.AntiForgeryToken()
 
 <script>
+    let lastJsonDisplayText = "";
+    let lastIsValidJson = false;
+
     function animateScrollTo(targetY, durationMs) {
         const prefersReducedMotion =
             window.matchMedia &&
@@ -153,11 +165,18 @@
         const statusEl = document.getElementById("jsonStatus");
         const warnEl = document.getElementById("jsonWarn");
         const outEl = document.getElementById("jsonOutput");
+        const copyBtn = document.getElementById("jsonCopyBtn");
+        const dlBtn = document.getElementById("jsonDownloadBtn");
 
+        statusEl.className = "json-status info";
         statusEl.textContent = "Processing…";
         warnEl.style.display = "none";
         warnEl.textContent = "";
         outEl.textContent = "";
+        lastJsonDisplayText = "";
+        lastIsValidJson = false;
+        if (copyBtn) copyBtn.disabled = true;
+        if (dlBtn) dlBtn.disabled = true;
 
         const form = new URLSearchParams();
         form.set("input", input);
@@ -173,20 +192,44 @@
         });
 
         if (!resp.ok) {
+            statusEl.className = "json-status bad";
             statusEl.textContent = "JSON view failed (" + resp.status + ")";
             return;
         }
 
         const data = await resp.json();
-        statusEl.textContent = data.statusText || "Done";
+        const kind = (data.statusKind || "").toString();
+        const ok = !!data.isValidJson;
+        const repaired = !!data.repaired;
+        const line = data.errorLine;
+        const col = data.errorColumn;
+
+        lastJsonDisplayText = data.displayText || "";
+        lastIsValidJson = ok;
+        if (copyBtn) copyBtn.disabled = !lastJsonDisplayText;
+        if (dlBtn) dlBtn.disabled = !lastJsonDisplayText;
+
+        if (ok && repaired) {
+            statusEl.className = "json-status ok";
+            statusEl.textContent = "✓ We fixed common issues (extra commas, single quotes, comments, etc.)";
+        } else if (ok) {
+            statusEl.className = "json-status ok";
+            statusEl.textContent = "✓ Valid JSON (formatted)";
+        } else {
+            statusEl.className = "json-status bad";
+            if (typeof line === "number" && typeof col === "number") {
+                statusEl.textContent = "✗ Could not parse JSON (line " + line + ", column " + col + ")";
+            } else {
+                statusEl.textContent = "✗ Tried to fix and structure but JSON is not valid";
+            }
+        }
 
         if (data.warnings && Array.isArray(data.warnings) && data.warnings.length) {
             warnEl.style.display = "block";
             warnEl.textContent = data.warnings.join("\n");
         }
 
-        const display = data.displayText || "";
-        outEl.innerHTML = highlightJsonish(display);
+        outEl.innerHTML = highlightJsonish(lastJsonDisplayText);
 
         // Auto-scroll to the result so it's immediately visible.
         const targetEl = (warnEl.style.display !== "none") ? warnEl : outEl;
@@ -198,17 +241,58 @@
             animateScrollTo(Math.max(0, y), 450);
         });
     }
+
+    async function copyJsonOutput() {
+        if (!lastJsonDisplayText) return;
+        if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(lastJsonDisplayText);
+            const btn = document.getElementById("jsonCopyBtn");
+            if (btn) {
+                const prev = btn.textContent;
+                btn.textContent = "Copied";
+                setTimeout(() => { btn.textContent = prev; }, 900);
+            }
+        }
+    }
+
+    function downloadJsonOutput() {
+        if (!lastJsonDisplayText) return;
+        const ext = lastIsValidJson ? "json" : "txt";
+        const filename = lastIsValidJson ? "formatted.json" : "structured.txt";
+        const blob = new Blob([lastJsonDisplayText], { type: lastIsValidJson ? "application/json" : "text/plain" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
 </script>
 
 <div class="json-viewer">
     <h1>@title</h1>
 
+    <div class="json-intro">
+        Format &amp; validate JSON. Paste your JSON, and we’ll pretty-print it and highlight errors.
+    </div>
+
     <div class="json-controls">
-        <button type="button" onclick="viewJson()">View / format</button>
+        <button type="button" class="btn btn-primary" onclick="viewJson()">Format</button>
+        <button id="jsonCopyBtn" type="button" class="btn btn-outline-secondary" onclick="copyJsonOutput()" disabled>Copy</button>
+        <button id="jsonDownloadBtn" type="button" class="btn btn-outline-secondary" onclick="downloadJsonOutput()" disabled>Download</button>
     </div>
 
     <div class="json-options">
         <label><input id="jsonAttemptRepair" type="checkbox" checked />Try to repair invalid JSON</label>
+        <details>
+            <summary>What does “repair” do?</summary>
+            <div class="mt-2 text-muted">
+                Repair is best-effort. It may remove comments, trailing commas, convert single quotes to double quotes, and quote simple unquoted keys.
+                Always review the formatted output before using it in production.
+            </div>
+        </details>
     </div>
 
     <div class="json-input">

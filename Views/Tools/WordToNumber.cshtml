@@ -1,0 +1,31 @@
+@{
+    // Titles + meta are set in ToolsController
+}
+
+<style>
+    .wtn-page h1 { display: none; }
+</style>
+
+<div class="mx-auto" style="max-width: 1100px;">
+    <h1 class="mb-2">Word ↔ Number converter</h1>
+    <p class="text-muted mb-3">
+        Convert English number words to digits and digits to words. Useful for forms, invoices, and copy where you need both formats.
+    </p>
+
+    @await Html.PartialAsync("_WordToNumberWidget", "Word to number")
+
+    <hr class="my-4" />
+
+    <h2 class="h5">FAQs</h2>
+    <div class="d-grid gap-2">
+        <details>
+            <summary class="fw-semibold">What language does this support?</summary>
+            <div class="text-muted mt-2">English only, using the short-scale system (thousand/million/billion/trillion).</div>
+        </details>
+        <details>
+            <summary class="fw-semibold">Working with text length limits?</summary>
+            <div class="text-muted mt-2">Try the <a href="/character-count">Character counter</a>.</div>
+        </details>
+    </div>
+</div>
+
