@@ -57,6 +57,23 @@ namespace CustomWebTools
                 pattern: "word-to-number",
                 defaults: new { controller = "Tools", action = "WordToNumber" });
 
+            // SEO alias (keep old path working)
+            app.MapControllerRoute(
+                name: "word-number-converter",
+                pattern: "word-number-converter",
+                defaults: new { controller = "Tools", action = "WordToNumber" });
+
+            app.MapControllerRoute(
+                name: "changelog",
+                pattern: "changelog",
+                defaults: new { controller = "Home", action = "Changelog" });
+
+            // Alias for sharing (release notes == changelog)
+            app.MapControllerRoute(
+                name: "release-notes",
+                pattern: "release-notes",
+                defaults: new { controller = "Home", action = "Changelog" });
+
             app.MapControllerRoute(
                 name: "default",
                 pattern: "{controller=Home}/{action=Index}/{id?}");

@@ -75,6 +75,16 @@
         white-space: pre-wrap;
     }
 
+    .json-error-details {
+        margin-top: 10px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        background: rgba(220,53,69,0.08);
+        border: 1px solid rgba(220,53,69,0.25);
+        white-space: pre-wrap;
+        display: none;
+    }
+
     .json-output {
         margin-top: 10px;
         padding: 12px;
@@ -103,6 +113,7 @@
 <script>
     let lastJsonDisplayText = "";
     let lastIsValidJson = false;
+    let lastValidJsonMinified = "";
 
     function animateScrollTo(targetY, durationMs) {
         const prefersReducedMotion =
@@ -164,18 +175,23 @@
 
         const statusEl = document.getElementById("jsonStatus");
         const warnEl = document.getElementById("jsonWarn");
+        const errEl = document.getElementById("jsonErrorDetails");
         const outEl = document.getElementById("jsonOutput");
         const copyBtn = document.getElementById("jsonCopyBtn");
+        const copyMinBtn = document.getElementById("jsonCopyMinBtn");
         const dlBtn = document.getElementById("jsonDownloadBtn");
 
         statusEl.className = "json-status info";
         statusEl.textContent = "Processing…";
         warnEl.style.display = "none";
         warnEl.textContent = "";
+        if (errEl) { errEl.style.display = "none"; errEl.textContent = ""; }
         outEl.textContent = "";
         lastJsonDisplayText = "";
         lastIsValidJson = false;
+        lastValidJsonMinified = "";
         if (copyBtn) copyBtn.disabled = true;
+        if (copyMinBtn) copyMinBtn.disabled = true;
         if (dlBtn) dlBtn.disabled = true;
 
         const form = new URLSearchParams();
@@ -206,7 +222,15 @@
 
         lastJsonDisplayText = data.displayText || "";
         lastIsValidJson = ok;
+        if (ok) {
+            try {
+                lastValidJsonMinified = JSON.stringify(JSON.parse(lastJsonDisplayText));
+            } catch {
+                lastValidJsonMinified = "";
+            }
+        }
         if (copyBtn) copyBtn.disabled = !lastJsonDisplayText;
+        if (copyMinBtn) copyMinBtn.disabled = !lastValidJsonMinified;
         if (dlBtn) dlBtn.disabled = !lastJsonDisplayText;
 
         if (ok && repaired) {
@@ -221,6 +245,18 @@
                 statusEl.textContent = "✗ Could not parse JSON (line " + line + ", column " + col + ")";
             } else {
                 statusEl.textContent = "✗ Tried to fix and structure but JSON is not valid";
+            }
+        }
+
+        if (!ok && errEl) {
+            const msg = (data.errorMessage || "").toString();
+            if ((typeof line === "number" && typeof col === "number") || msg) {
+                errEl.style.display = "block";
+                if (typeof line === "number" && typeof col === "number") {
+                    errEl.textContent = "Error at line " + line + ", column " + col + (msg ? " — " + msg : "");
+                } else {
+                    errEl.textContent = msg;
+                }
             }
         }
 
@@ -255,6 +291,19 @@
         }
     }
 
+    async function copyJsonMinified() {
+        if (!lastValidJsonMinified) return;
+        if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(lastValidJsonMinified);
+            const btn = document.getElementById("jsonCopyMinBtn");
+            if (btn) {
+                const prev = btn.textContent;
+                btn.textContent = "Copied";
+                setTimeout(() => { btn.textContent = prev; }, 900);
+            }
+        }
+    }
+
     function downloadJsonOutput() {
         if (!lastJsonDisplayText) return;
         const ext = lastIsValidJson ? "json" : "txt";
@@ -269,6 +318,23 @@
         a.remove();
         setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
+
+    function useJsonSample() {
+        const el = document.getElementById("jsonInput");
+        if (!el) return;
+        el.value = JSON.stringify({
+            status: "ok",
+            requestId: "req_7d3b2a1f",
+            user: { id: 123, role: "editor", flags: ["beta", "newsletter"] },
+            paging: { page: 1, pageSize: 25, total: 142 },
+            items: [
+                { id: "a1", name: "Alpha", active: true, score: 0.92 },
+                { id: "b2", name: "Beta", active: false, score: null }
+            ],
+            serverTimeUtc: "2026-03-28T10:15:30Z"
+        }, null, 2);
+        el.focus();
+    }
 </script>
 
 <div class="json-viewer">
@@ -280,8 +346,11 @@
 
     <div class="json-controls">
         <button type="button" class="btn btn-primary" onclick="viewJson()">Format</button>
-        <button id="jsonCopyBtn" type="button" class="btn btn-outline-secondary" onclick="copyJsonOutput()" disabled>Copy</button>
+        <button type="button" class="btn btn-outline-secondary" onclick="useJsonSample()">Sample JSON</button>
+        <button id="jsonCopyBtn" type="button" class="btn btn-outline-secondary" onclick="copyJsonOutput()" disabled>Copy pretty</button>
+        <button id="jsonCopyMinBtn" type="button" class="btn btn-outline-secondary" onclick="copyJsonMinified()" disabled>Copy minified</button>
         <button id="jsonDownloadBtn" type="button" class="btn btn-outline-secondary" onclick="downloadJsonOutput()" disabled>Download</button>
+        <button id="jsonCopyLinkBtn" type="button" class="btn btn-outline-secondary" onclick="DailyTools.copyCurrentUrl(this)">Share (copy link)</button>
     </div>
 
     <div class="json-options">
@@ -300,6 +369,7 @@
     </div>
 
     <div id="jsonStatus" class="json-status"></div>
+    <div id="jsonErrorDetails" class="json-error-details"></div>
     <div id="jsonWarn" class="json-warn" style="display:none;"></div>
     <pre id="jsonOutput" class="json-output"></pre>
 </div>

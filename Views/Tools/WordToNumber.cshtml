@@ -16,11 +16,36 @@
 
     <hr class="my-4" />
 
+    <h2 class="h5">Use cases</h2>
+    <p class="text-muted">
+        Handy for finance/reporting copy (“one thousand five hundred…”) as well as form inputs where users might type either words or digits.
+        It supports negatives and decimals for quick conversions.
+    </p>
+
+    <h2 class="h5 mt-4">How to use</h2>
+    <ol class="text-muted">
+        <li>Pick a mode: <strong>Word → Number</strong> or <strong>Number → Word</strong>.</li>
+        <li>Paste an example input (words like “one thousand…” or digits like “1,523”).</li>
+        <li>Copy the result for your document or form.</li>
+    </ol>
+
     <h2 class="h5">FAQs</h2>
     <div class="d-grid gap-2">
         <details>
             <summary class="fw-semibold">What language does this support?</summary>
             <div class="text-muted mt-2">English only, using the short-scale system (thousand/million/billion/trillion).</div>
+        </details>
+        <details>
+            <summary class="fw-semibold">Does it support “and” (e.g., “one hundred and five”)?</summary>
+            <div class="text-muted mt-2">Yes — “and” is ignored in word parsing.</div>
+        </details>
+        <details>
+            <summary class="fw-semibold">Does it support decimals?</summary>
+            <div class="text-muted mt-2">Yes — use “point” (e.g., “twelve point five”) or a numeric decimal (e.g., 12.5).</div>
+        </details>
+        <details>
+            <summary class="fw-semibold">Why did my input fail to parse?</summary>
+            <div class="text-muted mt-2">Usually due to unsupported words, unexpected ordering, or numbers too large to be safely represented.</div>
         </details>
         <details>
             <summary class="fw-semibold">Working with text length limits?</summary>

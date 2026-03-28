@@ -17,6 +17,15 @@
 
     <hr class="my-4" />
 
+    <h2 class="h5">Common use cases</h2>
+    <p class="text-muted">
+        Use this when you want a fast, visual answer to “what changed?” — without opening an IDE, Git diff, or a heavyweight comparison tool.
+        It’s especially handy for JSON/API responses, copied logs, configuration files, and text drafts.
+    </p>
+    <p class="text-muted">
+        If you don’t care about exact changes and just want a percentage, use the <a href="/similarity-score">Similarity score</a> tool instead.
+    </p>
+
     <h2 class="h5">How to use</h2>
     <ol class="text-muted">
         <li>Paste the original text into <strong>Version A</strong>.</li>
@@ -31,8 +40,20 @@
             <div class="text-muted mt-2">This tool sends the text to the server to compute a diff. It’s designed not to persist your pasted content.</div>
         </details>
         <details>
+            <summary class="fw-semibold">Does it work for code?</summary>
+            <div class="text-muted mt-2">Yes — it’s plain text. It highlights character-level differences and is useful for snippets, configs, and logs.</div>
+        </details>
+        <details>
             <summary class="fw-semibold">What does “changed lines” mean?</summary>
             <div class="text-muted mt-2">It counts how many line positions differ between A and B. It’s a quick summary, not a semantic measure.</div>
+        </details>
+        <details>
+            <summary class="fw-semibold">Why are spaces highlighted?</summary>
+            <div class="text-muted mt-2">Whitespace changes can matter (especially in JSON and code). This tool intentionally shows them.</div>
+        </details>
+        <details>
+            <summary class="fw-semibold">How do I compare JSON more cleanly?</summary>
+            <div class="text-muted mt-2">Format first using the <a href="/json-viewer">JSON viewer</a>, then compare the formatted outputs.</div>
         </details>
         <details>
             <summary class="fw-semibold">Looking for similarity instead of exact diffs?</summary>

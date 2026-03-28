@@ -25,6 +25,43 @@ jobs:
     - name: Build and Publish
       run: dotnet publish CustomWebTools.sln -c Release -o ./_build --no-restore
 
+    - name: Put site in maintenance mode (app_offline.htm)
+      shell: pwsh
+      run: |
+        New-Item -ItemType Directory -Force -Path "./_maintenance" | Out-Null
+        @"
+        <!doctype html>
+        <html lang="en">
+        <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <title>Deploying…</title>
+          <style>
+            body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; padding: 32px; }
+            .box { max-width: 720px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 14px; padding: 18px 20px; background: #fff; }
+            h1 { margin: 0 0 8px 0; font-size: 20px; }
+            p { margin: 0; color: #4b5563; }
+          </style>
+        </head>
+        <body>
+          <div class="box">
+            <h1>Deploying an update…</h1>
+            <p>This site will be back shortly.</p>
+          </div>
+        </body>
+        </html>
+        "@ | Set-Content -Path "./_maintenance/app_offline.htm" -Encoding UTF8
+
+    - name: Upload app_offline.htm
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+      with:
+        server: win8123.site4now.net
+        username: tools_shahrukh
+        password: Axact123
+        local-dir: ./_maintenance/
+        server-dir: ./
+        dangerous-clean-slate: false
+
     - name: Deploy via FTP
       uses: SamKirkland/FTP-Deploy-Action@v4.3.5
       with:
@@ -34,3 +71,29 @@ jobs:
         local-dir: ./_build/
         server-dir: ./
         dangerous-clean-slate: false
+
+    - name: Bring site back online (delete app_offline.htm)
+      shell: pwsh
+      run: |
+        $server = "win8123.site4now.net"
+        $user = "tools_shahrukh"
+        $pass = "Axact123"
+        $remoteDir = "./"
+
+        $dir = $remoteDir.Trim()
+        if ([string]::IsNullOrWhiteSpace($dir) -or $dir -eq "." -or $dir -eq "./" -or $dir -eq "/") {
+          $dir = ""
+        } else {
+          $dir = $dir.Trim("/").TrimEnd("/") + "/"
+        }
+
+        $baseFtp = "ftp://$server/$dir"
+
+        # Try plain FTP delete first; if the host requires TLS, retry with --ssl-reqd.
+        curl -sS --ftp-method nocwd -u "$user`:$pass" "$baseFtp" -Q "DELE app_offline.htm"
+        if ($LASTEXITCODE -ne 0) {
+          curl -sS --ssl-reqd --ftp-method nocwd -u "$user`:$pass" "$baseFtp" -Q "DELE app_offline.htm"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Failed to delete app_offline.htm. You may need to remove it manually via FTP."
+          }
+        }

@@ -166,6 +166,51 @@
         }
     }
 
+    function swapSimilaritySides() {
+        const a = document.getElementById("simText1");
+        const b = document.getElementById("simText2");
+        if (!a || !b) return;
+        const tmp = a.value;
+        a.value = b.value;
+        b.value = tmp;
+        a.focus();
+    }
+
+    function useSimilaritySample() {
+        const a = document.getElementById("simText1");
+        const b = document.getElementById("simText2");
+        if (!a || !b) return;
+        a.value = [
+            "Release notes (v1)",
+            "",
+            "We improved the JSON viewer so you can format payloads faster.",
+            "It now shows a clear status line and lets you copy the result."
+        ].join("\n");
+        b.value = [
+            "Release notes (v2)",
+            "",
+            "The JSON viewer was upgraded to pretty-print payloads more quickly.",
+            "It shows a clear status message and supports copying the output."
+        ].join("\n");
+        a.focus();
+        window.scrollTo(0, a.getBoundingClientRect().top + window.pageYOffset - 120);
+    }
+
+    async function copySimilaritySummary() {
+        const pct = document.getElementById("simCopyText")?.textContent ?? "";
+        if (!pct) return;
+        const text = "Compared two texts: " + pct.replace(/^Similarity:\s*/i, "").trim() + " similar.";
+        if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(text);
+            const btn = document.getElementById("simCopySummaryBtn");
+            if (btn) {
+                const prev = btn.textContent;
+                btn.textContent = "Copied";
+                setTimeout(() => { btn.textContent = prev; }, 900);
+            }
+        }
+    }
+
     async function compareSimilarity() {
         const text1 = document.getElementById("simText1").value;
         const text2 = document.getElementById("simText2").value;
@@ -253,7 +298,9 @@
     </div>
 
     <div class="sim-controls">
-        <button id="simCompareBtn" onclick="compareSimilarity()">Similarity score</button>
+        <button id="simCompareBtn" type="button" class="btn btn-primary" onclick="compareSimilarity()">Similarity score</button>
+        <button type="button" class="btn btn-outline-secondary" onclick="swapSimilaritySides()">Swap sides</button>
+        <button type="button" class="btn btn-outline-secondary" onclick="useSimilaritySample()">Use sample text</button>
     </div>
 
     <div class="sim-options">
@@ -277,6 +324,8 @@
         <div id="simExplain" class="sim-explain"></div>
         <div class="sim-copyRow">
             <button id="simCopyBtn" type="button" class="btn btn-outline-secondary btn-sm" onclick="copySimilarityText()">Copy result</button>
+            <button id="simCopySummaryBtn" type="button" class="btn btn-outline-secondary btn-sm" onclick="copySimilaritySummary()">Copy summary</button>
+            <button id="simCopyLinkBtn" type="button" class="btn btn-outline-secondary btn-sm" onclick="DailyTools.copyCurrentUrl(this)">Share (copy link)</button>
             <span id="simCopyText" class="sim-copyText"></span>
             <details>
                 <summary>What are shingles and char grams?</summary>

@@ -1,3 +1,4 @@
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,6 +8,40 @@
     @if (!string.IsNullOrWhiteSpace(ViewData["MetaDescription"] as string))
     {
         <meta name="description" content="@(ViewData["MetaDescription"] as string)" />
+    }
+
+    @{
+        var ogTitle = (ViewData["Title"] as string) ?? "DailyTools";
+        var ogDesc = (ViewData["MetaDescription"] as string) ?? "Fast, privacy-friendly text & JSON tools. No sign-up.";
+        var ogUrl = $"{Context.Request.Scheme}://{Context.Request.Host}{Context.Request.Path}{Context.Request.QueryString}";
+    }
+    <link rel="canonical" href="@ogUrl" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="DailyTools" />
+    <meta property="og:title" content="@ogTitle" />
+    <meta property="og:description" content="@ogDesc" />
+    <meta property="og:url" content="@ogUrl" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="@ogTitle" />
+    <meta name="twitter:description" content="@ogDesc" />
+
+    @{
+        var umamiEnabled = Configuration.GetValue<bool>("Umami:Enabled");
+        var umamiScriptUrl = (Configuration["Umami:ScriptUrl"] ?? "").Trim();
+        var umamiWebsiteId = (Configuration["Umami:WebsiteId"] ?? "").Trim();
+        var umamiDomains = (Configuration["Umami:Domains"] ?? "").Trim();
+        var shouldLoadUmami = umamiEnabled && !string.IsNullOrWhiteSpace(umamiScriptUrl) && !string.IsNullOrWhiteSpace(umamiWebsiteId);
+    }
+    @if (shouldLoadUmami)
+    {
+        if (string.IsNullOrWhiteSpace(umamiDomains))
+        {
+            <script defer src="@umamiScriptUrl" data-website-id="@umamiWebsiteId"></script>
+        }
+        else
+        {
+            <script defer src="@umamiScriptUrl" data-website-id="@umamiWebsiteId" data-domains="@umamiDomains"></script>
+        }
     }
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
@@ -37,7 +72,7 @@
                                 <li><a class="dropdown-item" href="/similarity-score">Similarity score</a></li>
                                 <li><a class="dropdown-item" href="/json-viewer">JSON viewer</a></li>
                                 <li><a class="dropdown-item" href="/character-count">Character count</a></li>
-                                <li><a class="dropdown-item" href="/word-to-number">Word ↔ Number</a></li>
+                                <li><a class="dropdown-item" href="/word-number-converter">Word ↔ Number</a></li>
                             </ul>
                         </li>
                     </ul>
@@ -60,12 +95,16 @@
                         DailyTools is built by a developer for developers and writers who need fast, no-signup utilities.
                         Some tools process your pasted text on the server to generate results. We don’t intentionally store your pasted content after processing.
                     </div>
+                    <div class="mt-2 small">
+                        Built and maintained by <span class="text-dark">Shahrukh A.</span>
+                    </div>
                 </div>
                 <div class="col-12 col-md-5">
                     <div class="fw-semibold text-dark">Links</div>
                     <div class="mt-1 d-flex flex-wrap gap-3">
                         <a class="text-muted" asp-controller="Home" asp-action="About">About</a>
                         <a class="text-muted" asp-controller="Home" asp-action="Privacy">Privacy</a>
+                        <a class="text-muted" href="/changelog">Changelog</a>
                         <a class="text-muted" asp-controller="Home" asp-action="Contact">Contact</a>
                     </div>
                 </div>

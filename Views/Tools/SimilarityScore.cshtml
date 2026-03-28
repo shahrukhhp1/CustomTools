@@ -21,6 +21,9 @@
         Useful for spotting near-duplicates, lightly edited copies, repeated content, or “same meaning with small edits” comparisons.
         For exact differences, use <a href="/text-compare">Text compare</a>.
     </p>
+    <p class="text-muted">
+        This isn’t a full plagiarism checker (no source search). It compares only the two texts you paste and produces a best-effort similarity score.
+    </p>
 
     <h2 class="h5 mt-4">FAQs</h2>
     <div class="d-grid gap-2">
@@ -31,9 +34,27 @@
             </div>
         </details>
         <details>
+            <summary class="fw-semibold">What are “word shingles”?</summary>
+            <div class="text-muted mt-2">
+                Shingles are consecutive word sequences (e.g., w-3 compares 3‑word phrases). They’re great at catching copy-with-small-edits.
+            </div>
+        </details>
+        <details>
+            <summary class="fw-semibold">What are “character grams”?</summary>
+            <div class="text-muted mt-2">
+                Character grams are consecutive character chunks (e.g., c-5). They help detect small formatting or typo changes.
+            </div>
+        </details>
+        <details>
             <summary class="fw-semibold">What should I set for word shingle and char gram?</summary>
             <div class="text-muted mt-2">
                 Start with w-3 and c-5. Increase shingle size to be stricter on phrase matching; increase char grams to be stricter on formatting-level overlap.
+            </div>
+        </details>
+        <details>
+            <summary class="fw-semibold">Is my data stored?</summary>
+            <div class="text-muted mt-2">
+                This tool sends the text to the server to compute the score. It’s designed not to persist your pasted content.
             </div>
         </details>
         <details>

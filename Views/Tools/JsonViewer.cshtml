@@ -16,6 +16,12 @@
 
     <hr class="my-4" />
 
+    <h2 class="h5">Use cases</h2>
+    <p class="text-muted">
+        This is built for developer workflows: API debugging, config inspection, log payload cleanup, and quick “is this valid JSON?” checks.
+        Use <strong>Copy</strong> to paste formatted JSON into tickets/PRs, or <strong>Download</strong> to save it locally.
+    </p>
+
     <h2 class="h5">How to use</h2>
     <ol class="text-muted">
         <li>Paste JSON into the input box.</li>
@@ -32,12 +38,24 @@
             </div>
         </details>
         <details>
+            <summary class="fw-semibold">What issues can “repair” fix?</summary>
+            <div class="text-muted mt-2">
+                Common ones: comments, trailing commas, single quotes, and simple unquoted keys. If it still can’t parse, you’ll get a structured view.
+            </div>
+        </details>
+        <details>
+            <summary class="fw-semibold">What does “line and column” mean?</summary>
+            <div class="text-muted mt-2">
+                It points to where parsing failed in the input. Use it to quickly find missing quotes, commas, or braces.
+            </div>
+        </details>
+        <details>
             <summary class="fw-semibold">Is my JSON stored?</summary>
             <div class="text-muted mt-2">JSON is sent to the server to format/repair. The site is designed not to persist your pasted content.</div>
         </details>
         <details>
             <summary class="fw-semibold">Need to compare two JSON payloads?</summary>
-            <div class="text-muted mt-2">Try <a href="/text-compare">Text compare</a> or <a href="/similarity-score">Similarity score</a>.</div>
+            <div class="text-muted mt-2">Format both here, then compare using <a href="/text-compare">Text compare</a>.</div>
         </details>
     </div>
 </div>

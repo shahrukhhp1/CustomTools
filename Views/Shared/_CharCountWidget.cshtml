@@ -81,6 +81,12 @@
         background: rgba(220,53,69,0.10);
         color: #b02a37;
     }
+
+    .count-share {
+        margin-top: 10px;
+        display: flex;
+        justify-content: flex-start;
+    }
 </style>
 
 <script>
@@ -156,6 +162,7 @@
         updateCharCount();
         document.getElementById("countText")?.focus();
     }
+
 </script>
 
 <div class="count-page">
@@ -182,6 +189,10 @@
     </div>
 
     <div id="presetStatus" class="presetStatus"></div>
+
+    <div class="count-share">
+        <button id="countCopyLinkBtn" type="button" class="btn btn-outline-secondary btn-sm" onclick="DailyTools.copyCurrentUrl(this)">Share (copy link)</button>
+    </div>
 </div>
 
 <script>

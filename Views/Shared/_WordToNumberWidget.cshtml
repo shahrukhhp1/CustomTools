@@ -66,6 +66,28 @@
         margin-top: 12px;
     }
 
+    .wtn-chips {
+        margin-top: 10px;
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .wtn-chip {
+        border: 1px solid rgba(0,0,0,0.12);
+        background: rgba(0,0,0,0.02);
+        border-radius: 999px;
+        padding: 6px 10px;
+        cursor: pointer;
+        user-select: none;
+        font-size: 0.92rem;
+    }
+
+    .wtn-chip:hover {
+        background: rgba(13,110,253,0.08);
+        border-color: rgba(13,110,253,0.22);
+    }
+
     #wtnOutput {
         width: 100%;
         box-sizing: border-box;
@@ -309,6 +331,15 @@
             navigator.clipboard.writeText(text);
         }
     }
+
+    function wtnUseExample(text) {
+        const input = document.getElementById("wtnInput");
+        if (!input) return;
+        input.value = text;
+        wtnConvert();
+        input.focus();
+    }
+
 </script>
 
 <div class="wtn-page">
@@ -337,9 +368,19 @@
 
     <textarea id="wtnInput" placeholder="Examples&#10;Word → Number: one thousand five hundred twenty-three&#10;Number → Word: 1,523&#10;&#10;Also supports: minus/negative, point/decimals" oninput="wtnConvert()"></textarea>
 
+    <div class="wtn-chips">
+        <div class="wtn-chip" onclick="wtnUseExample('One thousand two hundred thirty-four')">One thousand two hundred thirty-four</div>
+        <div class="wtn-chip" onclick="wtnUseExample('-45.67')">-45.67</div>
+        <div class="wtn-chip" onclick="wtnUseExample('1,523')">1,523</div>
+    </div>
+
     <div id="wtnOutputWrap">
         <div id="wtnOutput"></div>
         <div id="wtnError"></div>
+    </div>
+
+    <div class="mt-2">
+        <button id="wtnCopyLinkBtn" type="button" class="btn btn-outline-secondary btn-sm" onclick="DailyTools.copyCurrentUrl(this)">Share (copy link)</button>
     </div>
 
     <div class="wtn-help">

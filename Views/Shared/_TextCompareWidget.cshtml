@@ -17,6 +17,8 @@
     .controls {
         display: flex;
         justify-content: center;
+        gap: 10px;
+        flex-wrap: wrap;
         margin: 0 0 16px 0;
     }
 
@@ -66,6 +68,23 @@
         border: 1px solid rgba(0,0,0,0.08);
         font-weight: 700;
         display: inline-block;
+    }
+
+    .compareSummaryRow {
+        margin-top: 10px;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .compareSummaryText {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        font-size: 12px;
+        background: rgba(0,0,0,0.03);
+        border: 1px solid rgba(0,0,0,0.10);
+        border-radius: 10px;
+        padding: 6px 10px;
     }
 
     .allMatched {
@@ -125,8 +144,12 @@
         const text2 = document.getElementById("text2").value;
         const resultArea = $("#result");
         const matchStatus = $("#matchStatus");
+        const summaryText = document.getElementById("compareSummaryText");
+        const copyBtn = document.getElementById("compareCopyBtn");
         matchStatus.empty();
         resultArea.html("Comparing...");
+        if (summaryText) summaryText.textContent = "";
+        if (copyBtn) copyBtn.disabled = true;
 
         const token = document.querySelector("input[name='__RequestVerificationToken']")?.value;
         const form = new URLSearchParams();
@@ -149,6 +172,23 @@
 
         const html = await resp.text();
         resultArea.html(html);
+
+        // Build a short, copyable summary from the rendered stats.
+        try {
+            const statsEl = resultArea[0]?.querySelector?.(".compareStats");
+            const statsText = statsEl?.textContent ?? "";
+            const changed = (statsText.match(/Changed\s+lines:\s*(\d+)/i) || [])[1];
+            const sim = (statsText.match(/Similarity.*?:\s*(\d+)\s*%/i) || [])[1];
+            if (changed && sim) {
+                const s = `Compared two texts: ${sim}% similar, ${changed} changed lines.`;
+                if (summaryText) summaryText.textContent = s;
+                if (copyBtn) copyBtn.disabled = false;
+            } else if (statsText) {
+                const s = `Compared two texts: ${statsText.replace(/\s+/g, " ").trim()}`;
+                if (summaryText) summaryText.textContent = s;
+                if (copyBtn) copyBtn.disabled = false;
+            }
+        } catch { }
 
         const firstRed = resultArea[0]?.querySelector?.(".redback");
         if (firstRed) {
@@ -174,13 +214,72 @@
             matchStatus.html("<span class='allMatched'>All matched</span>");
         }
     }
+
+    function swapCompareSides() {
+        const a = document.getElementById("text1");
+        const b = document.getElementById("text2");
+        if (!a || !b) return;
+        const tmp = a.value;
+        a.value = b.value;
+        b.value = tmp;
+        a.focus();
+    }
+
+    function useCompareSample() {
+        const a = document.getElementById("text1");
+        const b = document.getElementById("text2");
+        if (!a || !b) return;
+        a.value = [
+            "Spec v1",
+            "",
+            "Endpoint: POST /api/users",
+            "Response:",
+            "{",
+            "  \"status\": \"ok\",",
+            "  \"user\": { \"id\": 123, \"role\": \"admin\" },",
+            "  \"features\": [\"search\", \"export\"],",
+            "  \"limits\": { \"requestsPerMinute\": 60 }",
+            "}"
+        ].join("\n");
+        b.value = [
+            "Spec v2",
+            "",
+            "Endpoint: POST /api/users",
+            "Response:",
+            "{",
+            "  \"status\": \"ok\",",
+            "  \"user\": { \"id\": 123, \"role\": \"editor\" },",
+            "  \"features\": [\"search\", \"export\", \"audit\"],",
+            "  \"limits\": { \"requestsPerMinute\": 120 }",
+            "}"
+        ].join("\n");
+        a.focus();
+        window.scrollTo(0, a.getBoundingClientRect().top + window.pageYOffset - 120);
+    }
+
+    async function copyCompareSummary() {
+        const text = document.getElementById("compareSummaryText")?.textContent ?? "";
+        if (!text) return;
+        if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(text);
+            const btn = document.getElementById("compareCopyBtn");
+            if (btn) {
+                const prev = btn.textContent;
+                btn.textContent = "Copied";
+                setTimeout(() => { btn.textContent = prev; }, 900);
+            }
+        }
+    }
+
 </script>
 
 <div class="compare-page">
     <h1>@title</h1>
 
     <div class="controls">
-        <button id="compare" onclick="compareTexts()">Compare</button>
+        <button id="compare" type="button" class="btn btn-primary" onclick="compareTexts()">Compare</button>
+        <button type="button" class="btn btn-outline-secondary" onclick="swapCompareSides()">Swap sides</button>
+        <button type="button" class="btn btn-outline-secondary" onclick="useCompareSample()">Use sample text</button>
     </div>
 
     <div class="inputs">
@@ -195,6 +294,11 @@
     </div>
 
     <div id="matchStatus"></div>
+    <div class="compareSummaryRow">
+        <button id="compareCopyBtn" type="button" class="btn btn-outline-secondary btn-sm" onclick="copyCompareSummary()" disabled>Copy result</button>
+        <button id="compareCopyLinkBtn" type="button" class="btn btn-outline-secondary btn-sm" onclick="DailyTools.copyCurrentUrl(this)">Share (copy link)</button>
+        <span id="compareSummaryText" class="compareSummaryText"></span>
+    </div>
     <div id="result"></div>
 
   

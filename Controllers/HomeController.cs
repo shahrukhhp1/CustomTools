@@ -37,6 +37,13 @@ namespace CustomWebTools.Controllers
             return View();
         }
 
+        public IActionResult Changelog()
+        {
+            ViewData["Title"] = "Changelog";
+            ViewData["MetaDescription"] = "What’s new in DailyTools — product updates and improvements.";
+            return View();
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public IActionResult Compare([FromForm] string text1, [FromForm] string text2)
