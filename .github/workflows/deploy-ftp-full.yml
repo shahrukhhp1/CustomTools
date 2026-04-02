@@ -1,0 +1,94 @@
+name: Deploy (FTP Full)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: windows-latest
+    env:
+      FTP_SERVER: win8123.site4now.net
+      FTP_USERNAME: tools_shahrukh
+      FTP_PASSWORD: Axact123
+      FTP_REMOTE_DIR: ./
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET 8 SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+
+    - name: Restore NuGet packages
+      run: dotnet restore CustomWebTools.sln
+
+    - name: Build and Publish
+      run: dotnet publish CustomWebTools.sln -c Release -o ./_build --no-restore
+
+    - name: Put site in maintenance mode (app_offline.htm)
+      shell: pwsh
+      run: |
+        New-Item -ItemType Directory -Force -Path "./_maintenance" | Out-Null
+        @"
+        <!doctype html>
+        <html lang="en">
+        <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <title>Deploying…</title>
+          <style>
+            body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; padding: 32px; }
+            .box { max-width: 720px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 14px; padding: 18px 20px; background: #fff; }
+            h1 { margin: 0 0 8px 0; font-size: 20px; }
+            p { margin: 0; color: #4b5563; }
+          </style>
+        </head>
+        <body>
+          <div class="box">
+            <h1>Deploying an update…</h1>
+            <p>This site will be back shortly.</p>
+          </div>
+        </body>
+        </html>
+        "@ | Set-Content -Path "./_maintenance/app_offline.htm" -Encoding UTF8
+
+    - name: Upload app_offline.htm (single-file upload)
+      shell: pwsh
+      run: |
+        pwsh ./scripts/ftp.ps1 `
+          -Action upload `
+          -Server "$env:FTP_SERVER" `
+          -Username "$env:FTP_USERNAME" `
+          -Password "$env:FTP_PASSWORD" `
+          -RemoteDir "$env:FTP_REMOTE_DIR" `
+          -RemoteFile "app_offline.htm" `
+          -LocalPath "./_maintenance/app_offline.htm"
+
+    - name: Deploy via FTP (full, includes wwwroot/lib)
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+      with:
+        server: ${{ env.FTP_SERVER }}
+        username: ${{ env.FTP_USERNAME }}
+        password: ${{ env.FTP_PASSWORD }}
+        local-dir: ./_build/
+        server-dir: ${{ env.FTP_REMOTE_DIR }}
+        # Do NOT delete any extra files on the server.
+        dangerous-clean-slate: false
+        # app_offline.htm is managed by dedicated steps above
+        exclude: |
+          app_offline.htm
+
+    - name: Bring site back online (delete app_offline.htm)
+      shell: pwsh
+      if: always()
+      run: |
+        pwsh ./scripts/ftp.ps1 `
+          -Action delete `
+          -Server "$env:FTP_SERVER" `
+          -Username "$env:FTP_USERNAME" `
+          -Password "$env:FTP_PASSWORD" `
+          -RemoteDir "$env:FTP_REMOTE_DIR" `
+          -RemoteFile "app_offline.htm"
+

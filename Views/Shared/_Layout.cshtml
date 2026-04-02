@@ -80,6 +80,23 @@
                             <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
                         </li>
 
+                        <!-- Mobile: show tool links directly in the collapsed menu -->
+                        <li class="nav-item d-md-none">
+                            <a class="nav-link text-dark" href="/text-compare">Text compare</a>
+                        </li>
+                        <li class="nav-item d-md-none">
+                            <a class="nav-link text-dark" href="/similarity-score">Similarity score</a>
+                        </li>
+                        <li class="nav-item d-md-none">
+                            <a class="nav-link text-dark" href="/json-viewer">JSON viewer</a>
+                        </li>
+                        <li class="nav-item d-md-none">
+                            <a class="nav-link text-dark" href="/character-count">Character count</a>
+                        </li>
+                        <li class="nav-item d-md-none">
+                            <a class="nav-link text-dark" href="/word-number-converter">Word ↔ Number</a>
+                        </li>
+
                         <!-- Desktop: show tools directly in the nav -->
                         <li class="nav-item d-none d-md-block">
                             <a class="nav-link text-dark" href="/text-compare">Text compare</a>
@@ -98,19 +115,6 @@
                         </li>
                     </ul>
                     <div class="d-flex align-items-center gap-2">
-                        <!-- Mobile: single Tools button top-right -->
-                        <div class="dropdown d-md-none">
-                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                Tools
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end">
-                                <li><a class="dropdown-item" href="/text-compare">Text compare</a></li>
-                                <li><a class="dropdown-item" href="/similarity-score">Similarity score</a></li>
-                                <li><a class="dropdown-item" href="/json-viewer">JSON viewer</a></li>
-                                <li><a class="dropdown-item" href="/character-count">Character count</a></li>
-                                <li><a class="dropdown-item" href="/word-number-converter">Word ↔ Number</a></li>
-                            </ul>
-                        </div>
                         <button id="themeToggle" type="button" class="btn btn-outline-secondary btn-sm" onclick="DailyTools.toggleTheme(this)">
                             Theme
                         </button>
