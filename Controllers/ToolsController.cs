@@ -38,6 +38,13 @@ namespace CustomWebTools.Controllers
             ViewData["MetaDescription"] = "Convert words to numbers and numbers to words online. English-only, short-scale, supports negatives and decimals. Handy for finance, reports, and forms.";
             return View();
         }
+
+        public IActionResult AppScreenshotGenerator()
+        {
+            ViewData["Title"] = "App Screenshot Generator (iOS & Android) – Create Store Images Online | DailyTools";
+            ViewData["MetaDescription"] = "Generate App Store / Play Store style screenshots in your browser. Add backgrounds and text, and export low/high-resolution PNGs. No upload required.";
+            return View();
+        }
     }
 }
 

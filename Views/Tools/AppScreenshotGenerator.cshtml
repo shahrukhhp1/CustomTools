@@ -1,0 +1,2201 @@
+@{
+    // Titles + meta are set in ToolsController
+}
+
+<style>
+    .asg-wrap { display: grid; grid-template-columns: 1fr; gap: 14px; }
+    @@media (min-width: 992px) { .asg-wrap { grid-template-columns: 420px 1fr; align-items: start; } }
+    .asg-card { border: 1px solid rgba(0,0,0,0.08); border-radius: 16px; background: #fff; box-shadow: 0 10px 30px rgba(0,0,0,0.04); padding: 14px 16px; }
+    html[data-theme="dark"] .asg-card { background: var(--dt-surface); border-color: var(--dt-border); }
+    .asg-title { font-weight: 900; letter-spacing: -0.01em; margin: 0 0 8px 0; font-size: 1.05rem; }
+    .asg-help { color: rgba(0,0,0,0.68); font-size: 0.95rem; margin: 0 0 12px 0; }
+    html[data-theme="dark"] .asg-help { color: var(--dt-muted); }
+    .asg-label { font-weight: 800; color: rgba(0,0,0,0.72); margin-bottom: 6px; }
+    html[data-theme="dark"] .asg-label { color: var(--dt-muted); }
+    .asg-row { display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 10px; }
+    .asg-row.two { grid-template-columns: 1fr 1fr; }
+    .asg-thumbRow { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+    .asg-thumb { width: 72px; height: 72px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.10); background: rgba(0,0,0,0.02); overflow: hidden; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    html[data-theme="dark"] .asg-thumb { border-color: var(--dt-border); background: rgba(255,255,255,0.04); }
+    .asg-thumb.active { outline: 3px solid rgba(13,110,253,0.45); border-color: rgba(13,110,253,0.40); }
+    .asg-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .asg-previewCanvasWrap { display: flex; justify-content: center; align-items: center; padding: 10px; border-radius: 14px; border: 1px solid rgba(0,0,0,0.10); background: rgba(0,0,0,0.02); overflow: auto; }
+    html[data-theme="dark"] .asg-previewCanvasWrap { border-color: var(--dt-border); background: rgba(255,255,255,0.03); }
+    #asgPreview { max-width: 100%; height: auto; border-radius: 12px; background: transparent; }
+    .asg-note { margin-top: 10px; color: rgba(0,0,0,0.62); font-size: 0.92rem; }
+    html[data-theme="dark"] .asg-note { color: var(--dt-muted); }
+
+    .asg-section {
+        border: 1px solid rgba(0,0,0,0.08);
+        border-radius: 14px;
+        padding: 10px 12px;
+        margin-bottom: 10px;
+        background: rgba(0,0,0,0.01);
+    }
+
+    html[data-theme="dark"] .asg-section {
+        border-color: var(--dt-border);
+        background: rgba(255,255,255,0.02);
+    }
+
+    .asg-section > summary {
+        cursor: pointer;
+        list-style: none;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        font-weight: 900;
+        letter-spacing: -0.01em;
+        padding: 2px 0;
+    }
+
+    .asg-section > summary::-webkit-details-marker { display: none; }
+
+    .asg-section > summary .asg-section__hint {
+        font-weight: 700;
+        font-size: 0.85rem;
+        color: rgba(0,0,0,0.55);
+    }
+
+    html[data-theme="dark"] .asg-section > summary .asg-section__hint { color: var(--dt-muted); }
+
+    .asg-section > summary::after {
+        content: "▾";
+        color: rgba(0,0,0,0.55);
+        font-weight: 900;
+        transition: transform 140ms ease, color 140ms ease;
+        transform: rotate(0deg);
+        flex: 0 0 auto;
+    }
+
+    html[data-theme="dark"] .asg-section > summary::after { color: var(--dt-muted); }
+
+    .asg-section[open] > summary::after {
+        transform: rotate(180deg);
+        color: rgba(0,0,0,0.68);
+    }
+
+    html[data-theme="dark"] .asg-section[open] > summary::after { color: rgba(255,255,255,0.70); }
+</style>
+
+<div class="mx-auto" style="max-width: 1200px;">
+    <h1 class="mb-2">App screenshot generator (iOS &amp; Android)</h1>
+    <p class="text-muted mb-3">
+        Generate store-style screenshots in your browser. Add background + text and export low/high-resolution PNGs.
+        <strong>No sign in required.</strong>
+    </p>
+
+    <div class="asg-wrap">
+        <div class="asg-card">
+            <details class="asg-section">
+                <summary>
+                    <span>Main</span>
+                    <span class="asg-section__hint">frame, size, position</span>
+                </summary>
+                <div class="mt-2">
+                    <div class="asg-row">
+                        <div>
+                            <div class="asg-label">Platform</div>
+                            <select id="asgPlatform" class="form-select">
+                                <option value="ios">iOS (App Store)</option>
+                                <option value="android" selected>Android (Google Play)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="asg-row" id="asgPlayTypeRow">
+                        <div>
+                            <div class="asg-label">Google Play listing type</div>
+                            <select id="asgPlayType" class="form-select">
+                                <option value="app" selected>App (needs 4+ screenshots)</option>
+                                <option value="game">Game (needs 3+ screenshots)</option>
+                            </select>
+                            <div class="text-muted small mt-1">
+                                Google Play ratios: portrait 9:16 (min 1080×1920), landscape 16:9 (min 1920×1080).
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="asg-row">
+                        <div>
+                            <div class="asg-label">Output preset</div>
+                            <select id="asgPreset" class="form-select">
+                                <!-- Options are populated by JS based on platform -->
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="asg-row two" id="asgCustomSizeRow">
+                        <div>
+                            <div class="asg-label">Width</div>
+                            <input id="asgW" type="number" class="form-control" min="320" max="4000" step="1" value="1290" />
+                        </div>
+                        <div>
+                            <div class="asg-label">Height</div>
+                            <input id="asgH" type="number" class="form-control" min="320" max="6000" step="1" value="2796" />
+                        </div>
+                    </div>
+
+                    <div class="asg-row two">
+                        <div>
+                            <div class="asg-label">Image fit</div>
+                            <select id="asgFit" class="form-select">
+                                <option value="contain" selected>Contain (no crop)</option>
+                                <option value="cover">Cover (crop + pan)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <div class="asg-label">Position presets</div>
+                            <div class="d-flex gap-2 flex-wrap">
+                                <button id="asgPosCenter" type="button" class="btn btn-outline-secondary btn-sm">Center</button>
+                                <button id="asgPosTop" type="button" class="btn btn-outline-secondary btn-sm">Top</button>
+                                <button id="asgPosBottom" type="button" class="btn btn-outline-secondary btn-sm">Bottom</button>
+                                <button id="asgPosLeft" type="button" class="btn btn-outline-secondary btn-sm">Left</button>
+                                <button id="asgPosRight" type="button" class="btn btn-outline-secondary btn-sm">Right</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="asg-row two">
+                        <div>
+                            <div class="asg-label">Position X</div>
+                            <input id="asgOffsetX" type="range" class="form-range" min="-200" max="200" step="1" value="0" />
+                            <div class="text-muted small">Tip: drag the preview to move diagonally.</div>
+                        </div>
+                        <div>
+                            <div class="asg-label">Position Y</div>
+                            <input id="asgOffsetY" type="range" class="form-range" min="-200" max="200" step="1" value="0" />
+                            <div class="text-muted small">(-200 = up, +200 = down)</div>
+                        </div>
+                    </div>
+                </div>
+            </details>
+
+            <details class="asg-section">
+                <summary>
+                    <span>Sizing</span>
+                    <span class="asg-section__hint">frame, size, shadow</span>
+                </summary>
+                <div class="mt-2">
+                    <div class="asg-row two">
+                        <div>
+                            <div class="asg-label">Frame</div>
+                            <select id="asgFrame" class="form-select">
+                                <!-- Options are populated by JS based on platform -->
+                            </select>
+                        </div>
+                        <div>
+                            <div class="asg-label">Device rotation</div>
+                            <input id="asgRotation" type="range" class="form-range" min="-90" max="90" step="1" value="0" />
+                            <div class="text-muted small">Degrees (negative = left tilt)</div>
+                        </div>
+                    </div>
+
+                    <div class="asg-row">
+                        <div>
+                            <div class="asg-label">Device / screenshot size</div>
+                            <input id="asgDeviceScale" type="range" class="form-range" min="60" max="170" step="1" value="100" />
+                            <div class="text-muted small">Scales the phone + screenshot together (or zooms screenshot when frame = None)</div>
+                        </div>
+                    </div>
+
+                    <div class="asg-row two">
+                        <div>
+                            <div class="asg-label">Corner radius</div>
+                            <input id="asgRadius" type="range" class="form-range" min="0" max="90" step="1" value="34" />
+                        </div>
+                        <div>
+                            <div class="asg-label">Device shadow (on background)</div>
+                            <input id="asgShadow" type="range" class="form-range" min="0" max="70" step="1" value="26" />
+                        </div>
+                    </div>
+                </div>
+            </details>
+
+            <details class="asg-section">
+                <summary>
+                    <span>Text</span>
+                    <span class="asg-section__hint">title, font, size</span>
+                </summary>
+                <div class="mt-2">
+                    <div class="asg-row">
+                        <div>
+                            <div class="asg-label">Font (applies to both)</div>
+                            <select id="asgFont" class="form-select">
+                                <option value="system" selected>System (default)</option>
+                                <option value="modern">Modern (SF/Segoe/Roboto)</option>
+                                <option value="clean">Clean (Helvetica/Arial)</option>
+                                <option value="humanist">Humanist (Segoe UI / Calibri)</option>
+                                <option value="rounded">Rounded</option>
+                                <option value="condensed">Condensed</option>
+                                <option value="slab">Slab serif</option>
+                                <option value="serif">Serif</option>
+                                <option value="hand">Handwriting</option>
+                                <option value="mono">Mono</option>
+                            </select>
+                            <div class="text-muted small mt-1">Drag: Shift = move Title, Alt+Shift = move Subtitle</div>
+                        </div>
+                    </div>
+
+                    <div class="asg-row">
+                        <div class="asg-label">Title</div>
+                        <input id="asgTitle" type="text" class="form-control" placeholder="Example: Track habits effortlessly" />
+                    </div>
+
+                    <div class="asg-row two">
+                        <div>
+                            <div class="asg-label">Title color</div>
+                            <input id="asgTitleColor" type="color" class="form-control form-control-color" value="#ffffff" />
+                        </div>
+                        <div>
+                            <div class="asg-label">Title size</div>
+                            <input id="asgTitleScale" type="range" class="form-range" min="60" max="200" step="1" value="100" />
+                        </div>
+                    </div>
+
+                    <div class="asg-row two">
+                        <div>
+                            <div class="asg-label">Title position X</div>
+                            <input id="asgTitleOffsetX" type="range" class="form-range" min="-200" max="200" step="1" value="0" />
+                        </div>
+                        <div>
+                            <div class="asg-label">Title position Y</div>
+                            <input id="asgTitleOffsetY" type="range" class="form-range" min="-200" max="200" step="1" value="0" />
+                        </div>
+                    </div>
+
+                    <div class="asg-row">
+                        <div class="d-flex gap-2 flex-wrap">
+                            <button id="asgTitleCenter" type="button" class="btn btn-outline-secondary btn-sm">Center title</button>
+                        </div>
+                    </div>
+
+                    <hr class="my-2" />
+
+                    <div class="asg-row">
+                        <div class="asg-label">Subtitle</div>
+                        <input id="asgSubtitle" type="text" class="form-control" placeholder="Example: Daily streaks • Reminders • Insights" />
+                    </div>
+
+                    <div class="asg-row two">
+                        <div>
+                            <div class="asg-label">Subtitle color</div>
+                            <input id="asgSubtitleColor" type="color" class="form-control form-control-color" value="#e6f0ff" />
+                        </div>
+                        <div>
+                            <div class="asg-label">Subtitle size</div>
+                            <input id="asgSubtitleScale" type="range" class="form-range" min="60" max="200" step="1" value="100" />
+                        </div>
+                    </div>
+
+                    <div class="asg-row two">
+                        <div>
+                            <div class="asg-label">Subtitle position X</div>
+                            <input id="asgSubtitleOffsetX" type="range" class="form-range" min="-200" max="200" step="1" value="0" />
+                        </div>
+                        <div>
+                            <div class="asg-label">Subtitle position Y</div>
+                            <input id="asgSubtitleOffsetY" type="range" class="form-range" min="-200" max="200" step="1" value="0" />
+                        </div>
+                    </div>
+
+                    <div class="asg-row">
+                        <div class="d-flex gap-2 flex-wrap">
+                            <button id="asgSubtitleCenter" type="button" class="btn btn-outline-secondary btn-sm">Center subtitle</button>
+                        </div>
+                    </div>
+                </div>
+            </details>
+
+            <details class="asg-section">
+                <summary>
+                    <span>Background</span>
+                    <span class="asg-section__hint">solid / gradient</span>
+                </summary>
+                <div class="mt-2">
+                    <div class="asg-row two">
+                        <div>
+                            <div class="asg-label">Mode</div>
+                            <select id="asgBgMode" class="form-select">
+                                <option value="gradient" selected>Gradient</option>
+                                <option value="solid">Single color</option>
+                            </select>
+                        </div>
+                        <div>
+                            <div class="asg-label">Gradient direction</div>
+                            <select id="asgBgDir" class="form-select">
+                                <option value="tlbr" selected>Top-left → Bottom-right</option>
+                                <option value="trbl">Top-right → Bottom-left</option>
+                                <option value="tb">Top → Bottom</option>
+                                <option value="lr">Left → Right</option>
+                                <option value="radial">Radial</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="asg-row" id="asgBgSolidRow" style="display:none;">
+                        <div>
+                            <div class="asg-label">Background color</div>
+                            <input id="asgBgSolid" type="color" class="form-control form-control-color" value="#0d6efd" />
+                        </div>
+                    </div>
+
+                    <div class="asg-row two" id="asgBgGradientRow">
+                        <div>
+                            <div class="asg-label">Background A</div>
+                            <input id="asgBgA" type="color" class="form-control form-control-color" value="#0d6efd" />
+                        </div>
+                        <div>
+                            <div class="asg-label">Background B</div>
+                            <input id="asgBgB" type="color" class="form-control form-control-color" value="#198754" />
+                        </div>
+                    </div>
+                </div>
+            </details>
+
+            <div class="asg-note">
+                Exports are client-side. High-res is generated by rendering at 2× scale.
+            </div>
+        </div>
+
+        <div class="asg-card">
+            <div class="mb-3">
+                <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-1">
+                    <div>
+                        <div class="asg-title mb-0">Screenshots</div>
+                        <div class="text-muted">Upload, then click a thumbnail to select.</div>
+                    </div>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button id="asgCopyProjectJson" type="button" class="btn btn-outline-secondary btn-sm" disabled>Copy project JSON</button>
+                        <button id="asgApplyAll" type="button" class="btn btn-outline-primary btn-sm" disabled>Apply settings to all</button>
+                    </div>
+                </div>
+
+                <input id="asgFiles" type="file" accept="image/*" multiple class="form-control" />
+                <div class="d-flex gap-2 flex-wrap mt-2">
+                    <button id="asgUseSample" type="button" class="btn btn-outline-secondary btn-sm">Use sample</button>
+                    <button id="asgClear" type="button" class="btn btn-outline-secondary btn-sm">Clear</button>
+                </div>
+
+                <div class="asg-thumbRow" id="asgThumbRow"></div>
+                <div class="asg-note">Each screenshot keeps its own text + settings. Use “Apply settings to all” to copy the current screen’s setup to the others.</div>
+            </div>
+
+            <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-2">
+                <div>
+                    <div class="asg-title mb-0">Preview</div>
+                    <div class="text-muted">Download low/high resolution PNG.</div>
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                    <button id="asgDownloadLow" type="button" class="btn btn-outline-secondary btn-sm" disabled>Download (low)</button>
+                    <button id="asgDownloadHigh" type="button" class="btn btn-primary btn-sm" disabled>Download (high)</button>
+                </div>
+            </div>
+
+            <div class="asg-previewCanvasWrap">
+                <canvas id="asgPreview" width="600" height="1200"></canvas>
+            </div>
+            <div class="asg-note" id="asgStatus"></div>
+            <div class="asg-note" id="asgPlayHints"></div>
+        </div>
+    </div>
+
+    <hr class="my-4" />
+
+    <h2 class="h5">FAQ</h2>
+    <details>
+        <summary class="fw-semibold">Does this upload my screenshots?</summary>
+        <div class="text-muted mt-2">No — rendering is done in your browser using Canvas.</div>
+    </details>
+</div>
+
+<script>
+    (function () {
+        "use strict";
+
+        var elFiles = document.getElementById("asgFiles");
+        var elThumbRow = document.getElementById("asgThumbRow");
+        var elUseSample = document.getElementById("asgUseSample");
+        var elClear = document.getElementById("asgClear");
+        var elApplyAll = document.getElementById("asgApplyAll");
+
+        var elPlatform = document.getElementById("asgPlatform");
+        var elPlayTypeRow = document.getElementById("asgPlayTypeRow");
+        var elPreset = document.getElementById("asgPreset");
+        var elPlayType = document.getElementById("asgPlayType");
+        var elCustomSizeRow = document.getElementById("asgCustomSizeRow");
+        var elW = document.getElementById("asgW");
+        var elH = document.getElementById("asgH");
+        var elTitle = document.getElementById("asgTitle");
+        var elSubtitle = document.getElementById("asgSubtitle");
+        var elFont = document.getElementById("asgFont");
+        var elTitleColor = document.getElementById("asgTitleColor");
+        var elSubtitleColor = document.getElementById("asgSubtitleColor");
+        var elTitleScale = document.getElementById("asgTitleScale");
+        var elSubtitleScale = document.getElementById("asgSubtitleScale");
+        var elTitleOffsetX = document.getElementById("asgTitleOffsetX");
+        var elTitleOffsetY = document.getElementById("asgTitleOffsetY");
+        var elSubtitleOffsetX = document.getElementById("asgSubtitleOffsetX");
+        var elSubtitleOffsetY = document.getElementById("asgSubtitleOffsetY");
+        var elTitleCenter = document.getElementById("asgTitleCenter");
+        var elSubtitleCenter = document.getElementById("asgSubtitleCenter");
+        var elBgMode = document.getElementById("asgBgMode");
+        var elBgDir = document.getElementById("asgBgDir");
+        var elBgSolidRow = document.getElementById("asgBgSolidRow");
+        var elBgGradientRow = document.getElementById("asgBgGradientRow");
+        var elBgSolid = document.getElementById("asgBgSolid");
+        var elBgA = document.getElementById("asgBgA");
+        var elBgB = document.getElementById("asgBgB");
+        var elRadius = document.getElementById("asgRadius");
+        var elShadow = document.getElementById("asgShadow");
+        var elFrame = document.getElementById("asgFrame");
+        var elRotation = document.getElementById("asgRotation");
+        var el3dEnabled = document.getElementById("asg3dEnabled");
+        var elTiltX = document.getElementById("asgTiltX");
+        var elTiltY = document.getElementById("asgTiltY");
+        var elDepth = document.getElementById("asgDepth");
+        var elFit = document.getElementById("asgFit");
+        var elDeviceScale = document.getElementById("asgDeviceScale");
+        var elOffsetX = document.getElementById("asgOffsetX");
+        var elOffsetY = document.getElementById("asgOffsetY");
+        var elPosCenter = document.getElementById("asgPosCenter");
+        var elPosTop = document.getElementById("asgPosTop");
+        var elPosBottom = document.getElementById("asgPosBottom");
+        var elPosLeft = document.getElementById("asgPosLeft");
+        var elPosRight = document.getElementById("asgPosRight");
+
+        var elDownloadLow = document.getElementById("asgDownloadLow");
+        var elDownloadHigh = document.getElementById("asgDownloadHigh");
+        var elStatus = document.getElementById("asgStatus");
+        var elPlayHints = document.getElementById("asgPlayHints");
+        var elCopyProjectJson = document.getElementById("asgCopyProjectJson");
+
+        var previewCanvas = document.getElementById("asgPreview");
+        var previewCtx = previewCanvas.getContext("2d");
+
+        var lastPreviewScale = 1;
+        var project = {
+            version: 1,
+            platform: "android",
+            playType: "app",
+            screens: []
+        };
+        // Expose for debugging / future "save project" work.
+        window.__asgProject = project;
+        window.__asgProjectJson = "";
+
+        var activeIndex = -1;
+        var rafId = 0;
+        var PAN_MAX = 200; // percent of screen dimension
+        var TEXT_PAN_MAX = 200; // percent of output dimension
+        var SCALE_MIN = 60;
+        var SCALE_MAX = 170;
+        var TEXT_SCALE_MAX = 200;
+
+        function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
+
+        function roundedRectPath(ctx, x, y, w, h, r) {
+            var rr = Math.max(0, Math.min(r, Math.min(w, h) / 2));
+            ctx.beginPath();
+            ctx.moveTo(x + rr, y);
+            ctx.arcTo(x + w, y, x + w, y + h, rr);
+            ctx.arcTo(x + w, y + h, x, y + h, rr);
+            ctx.arcTo(x, y + h, x, y, rr);
+            ctx.arcTo(x, y, x + w, y, rr);
+            ctx.closePath();
+        }
+
+        function readNumber(el, fallback) {
+            var n = parseInt(el.value, 10);
+            return Number.isFinite(n) ? n : fallback;
+        }
+
+        function readFloat(el, fallback) {
+            var n = parseFloat(el.value);
+            return Number.isFinite(n) ? n : fallback;
+        }
+
+        function getFontStack(key) {
+            if (key === "modern") return 'system-ui, -apple-system, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, Arial, sans-serif';
+            if (key === "clean") return '"Helvetica Neue", Helvetica, Arial, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+            if (key === "humanist") return '"Segoe UI", Calibri, "Trebuchet MS", system-ui, -apple-system, Roboto, Arial, sans-serif';
+            if (key === "rounded") return 'ui-rounded, "SF Pro Rounded", "Segoe UI Rounded", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
+            if (key === "condensed") return '"Aptos Narrow", "Arial Narrow", "HelveticaNeue-CondensedBold", "Helvetica Neue Condensed", "Roboto Condensed", "Segoe UI", Arial, sans-serif';
+            if (key === "slab") return '"Rockwell", "Roboto Slab", "Segoe UI", Georgia, serif';
+            if (key === "serif") return 'ui-serif, Georgia, "Times New Roman", Times, serif';
+            if (key === "hand") return '"Bradley Hand", "Segoe Script", "Comic Sans MS", "Apple Chancery", cursive';
+            if (key === "mono") return 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace';
+            return 'system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
+        }
+
+        function updateBackgroundVisibility() {
+            var mode = elBgMode ? (elBgMode.value || "gradient") : "gradient";
+            if (elBgSolidRow) elBgSolidRow.style.display = (mode === "solid") ? "" : "none";
+            if (elBgGradientRow) elBgGradientRow.style.display = (mode === "gradient") ? "" : "none";
+            if (elBgDir) elBgDir.disabled = (mode !== "gradient");
+        }
+
+        function update3dControls() {
+            if (!el3dEnabled) return;
+            var on = !!el3dEnabled.checked;
+            if (elTiltX) elTiltX.disabled = !on;
+            if (elTiltY) elTiltY.disabled = !on;
+            if (elDepth) elDepth.disabled = !on;
+        }
+
+        function getBasePad(outW, outH) {
+            // Fixed internal margin (we removed the UI "Padding" control).
+            // Keep enough breathing room for text + composition.
+            return clamp(Math.round(Math.min(outW, outH) * 0.06), 24, 160);
+        }
+
+        function getPresetDims(preset) {
+            // Android / Google Play
+            if (preset === "android1080") return { w: 1080, h: 1920 };
+            if (preset === "gpPortrait") return { w: 1080, h: 1920 };
+            if (preset === "gpLandscape") return { w: 1920, h: 1080 };
+            if (preset === "square") return { w: 1080, h: 1080 };
+
+            // iOS (from App Store Connect accepted sizes)
+            // 6.9"
+            if (preset === "ios69_1260x2736") return { w: 1260, h: 2736 };
+            if (preset === "ios69_1290x2796") return { w: 1290, h: 2796 };
+            if (preset === "ios69_1320x2868") return { w: 1320, h: 2868 };
+            // 6.5"
+            if (preset === "ios65_1284x2778") return { w: 1284, h: 2778 };
+            if (preset === "ios65_1242x2688") return { w: 1242, h: 2688 };
+            // 6.3"
+            if (preset === "ios63_1179x2556") return { w: 1179, h: 2556 };
+            if (preset === "ios63_1206x2622") return { w: 1206, h: 2622 };
+            // 6.1"
+            if (preset === "ios61_1170x2532") return { w: 1170, h: 2532 };
+            if (preset === "ios61_1125x2436") return { w: 1125, h: 2436 };
+            if (preset === "ios61_1080x2340") return { w: 1080, h: 2340 };
+            // Legacy (kept for convenience)
+            if (preset === "ios55_1242x2208") return { w: 1242, h: 2208 };
+            if (preset === "ios47_750x1334") return { w: 750, h: 1334 };
+
+            return null;
+        }
+
+        function presetOptionsForPlatform(platform) {
+            if (platform === "ios") {
+                return [
+                    { id: "custom", label: "Custom" },
+                    { id: "ios69_1290x2796", label: "iPhone 6.9\" (1290×2796) – recommended" },
+                    { id: "ios69_1320x2868", label: "iPhone 6.9\" (1320×2868)" },
+                    { id: "ios69_1260x2736", label: "iPhone 6.9\" (1260×2736)" },
+                    { id: "ios63_1179x2556", label: "iPhone 6.3\" (1179×2556)" },
+                    { id: "ios63_1206x2622", label: "iPhone 6.3\" (1206×2622)" },
+                    { id: "ios61_1170x2532", label: "iPhone 6.1\" (1170×2532)" },
+                    { id: "ios61_1125x2436", label: "iPhone 6.1\" (1125×2436)" },
+                    { id: "ios61_1080x2340", label: "iPhone 6.1\" (1080×2340)" },
+                    { id: "ios65_1284x2778", label: "iPhone 6.5\" (1284×2778)" },
+                    { id: "ios65_1242x2688", label: "iPhone 6.5\" (1242×2688)" },
+                    { id: "ios55_1242x2208", label: "Legacy iPhone 5.5\" (1242×2208)" },
+                    { id: "ios47_750x1334", label: "Legacy iPhone 4.7\" (750×1334)" }
+                ];
+            }
+
+            // Android
+            return [
+                { id: "custom", label: "Custom" },
+                { id: "gpPortrait", label: "Google Play portrait 9:16 (1080×1920 min)" },
+                { id: "gpLandscape", label: "Google Play landscape 16:9 (1920×1080 min)" },
+                { id: "android1080", label: "Android portrait (1080×1920)" },
+            ];
+        }
+
+        function defaultPresetForPlatform(platform) {
+            return (platform === "ios") ? "ios69_1290x2796" : "gpPortrait";
+        }
+
+        function rebuildPresetSelect(platform) {
+            var opts = presetOptionsForPlatform(platform);
+            var current = elPreset.value;
+            elPreset.innerHTML = "";
+            opts.forEach(function (o) {
+                var opt = document.createElement("option");
+                opt.value = o.id;
+                opt.textContent = o.label;
+                elPreset.appendChild(opt);
+            });
+            // Try to keep current selection when switching platform, else fall back to custom.
+            var allowed = opts.some(function (o) { return o.id === current; });
+            if (allowed) {
+                elPreset.value = current;
+            } else {
+                elPreset.value = defaultPresetForPlatform(platform);
+            }
+        }
+
+        function updateCustomSizeVisibility() {
+            if (!elCustomSizeRow) return;
+            var isCustom = (elPreset.value === "custom");
+            elCustomSizeRow.style.display = isCustom ? "" : "none";
+        }
+
+        function getFrameBaseKind(frameValue) {
+            var v = frameValue || "none";
+            if (v === "none") return "none";
+            if (v.indexOf("ios_") === 0 || v === "ios") return "ios";
+            if (v.indexOf("android_") === 0 || v === "android") return "android";
+            return "none";
+        }
+
+        function frameOptionsForPlatform(platform) {
+            // Always allow "none"
+            var common = [{ id: "none", label: "None" }];
+            if (platform === "ios") {
+                return common.concat([
+                    { id: "ios_midnight", label: "iPhone frame – Midnight" },
+                    { id: "ios_silver", label: "iPhone frame – Silver" },
+                    { id: "ios_blue", label: "iPhone frame – Blue" },
+                    { id: "ios_gold", label: "iPhone frame – Gold" },
+                    { id: "ios_graphite", label: "iPhone frame – Graphite" }
+                ]);
+            }
+            return common.concat([
+                { id: "android_onyx", label: "Android frame – Onyx" },
+                { id: "android_pearl", label: "Android frame – Pearl" },
+                { id: "android_forest", label: "Android frame – Forest" },
+                { id: "android_pixel", label: "Android frame – Pixel style" }
+            ]);
+        }
+
+        function defaultFrameForPlatform(platform) {
+            // Keep it conservative: default is "none"
+            return "none";
+        }
+
+        function rebuildFrameSelect(platform) {
+            var opts = frameOptionsForPlatform(platform);
+            var current = elFrame.value;
+            elFrame.innerHTML = "";
+            opts.forEach(function (o) {
+                var opt = document.createElement("option");
+                opt.value = o.id;
+                opt.textContent = o.label;
+                elFrame.appendChild(opt);
+            });
+            var allowed = opts.some(function (o) { return o.id === current; });
+            elFrame.value = allowed ? current : defaultFrameForPlatform(platform);
+        }
+
+        function getFrameSpec(frameValue) {
+            var base = getFrameBaseKind(frameValue);
+            if (base === "none") return { base: "none" };
+
+            // Defaults
+            var spec = {
+                base: base,
+                // Modern devices have fairly thin bezels; keep this subtle.
+                bezelFrac: base === "ios" ? 0.032 : 0.028,
+                bodyGrad0: "rgba(18,22,28,1)",
+                bodyGrad1: "rgba(7,10,14,1)",
+                stroke: "rgba(255,255,255,0.10)",
+                cutout: "rgba(0,0,0,1)",
+                speaker: "rgba(255,255,255,0.18)",
+                rimLight: "rgba(255,255,255,0.18)",
+                rimDark: "rgba(0,0,0,0.40)",
+                innerBezel: "rgba(0,0,0,0.45)",
+                button0: "rgba(30,34,40,1)",
+                button1: "rgba(10,12,16,1)",
+                glass0: "rgba(255,255,255,0.14)",
+                glass1: "rgba(255,255,255,0.00)"
+            };
+
+            switch (frameValue) {
+                // iOS variants
+                case "ios_midnight":
+                case "ios":
+                    spec.bodyGrad0 = "rgba(18,22,28,1)";
+                    spec.bodyGrad1 = "rgba(7,10,14,1)";
+                    spec.stroke = "rgba(255,255,255,0.10)";
+                    break;
+                case "ios_graphite":
+                    spec.bodyGrad0 = "rgba(34,36,40,1)";
+                    spec.bodyGrad1 = "rgba(16,17,19,1)";
+                    spec.stroke = "rgba(255,255,255,0.09)";
+                    break;
+                case "ios_silver":
+                    spec.bodyGrad0 = "rgba(238,240,244,1)";
+                    spec.bodyGrad1 = "rgba(204,208,216,1)";
+                    spec.stroke = "rgba(0,0,0,0.14)";
+                    spec.speaker = "rgba(0,0,0,0.22)";
+                    spec.rimLight = "rgba(255,255,255,0.55)";
+                    spec.rimDark = "rgba(0,0,0,0.18)";
+                    spec.innerBezel = "rgba(0,0,0,0.22)";
+                    spec.button0 = "rgba(210,214,222,1)";
+                    spec.button1 = "rgba(170,176,186,1)";
+                    break;
+                case "ios_blue":
+                    spec.bodyGrad0 = "rgba(41,77,162,1)";
+                    spec.bodyGrad1 = "rgba(12,24,60,1)";
+                    spec.stroke = "rgba(255,255,255,0.10)";
+                    spec.rimLight = "rgba(255,255,255,0.26)";
+                    spec.rimDark = "rgba(0,0,0,0.30)";
+                    break;
+                case "ios_gold":
+                    spec.bodyGrad0 = "rgba(215,177,120,1)";
+                    spec.bodyGrad1 = "rgba(128,92,44,1)";
+                    spec.stroke = "rgba(0,0,0,0.14)";
+                    spec.speaker = "rgba(0,0,0,0.22)";
+                    spec.rimLight = "rgba(255,255,255,0.42)";
+                    spec.rimDark = "rgba(0,0,0,0.22)";
+                    spec.innerBezel = "rgba(0,0,0,0.22)";
+                    spec.button0 = "rgba(205,165,110,1)";
+                    spec.button1 = "rgba(150,110,60,1)";
+                    break;
+
+                // Android variants
+                case "android_onyx":
+                case "android":
+                    spec.bodyGrad0 = "rgba(20,22,28,1)";
+                    spec.bodyGrad1 = "rgba(9,10,13,1)";
+                    spec.stroke = "rgba(255,255,255,0.10)";
+                    break;
+                case "android_pearl":
+                    spec.bodyGrad0 = "rgba(246,247,249,1)";
+                    spec.bodyGrad1 = "rgba(210,214,222,1)";
+                    spec.stroke = "rgba(0,0,0,0.16)";
+                    spec.speaker = "rgba(0,0,0,0.24)";
+                    spec.rimLight = "rgba(255,255,255,0.60)";
+                    spec.rimDark = "rgba(0,0,0,0.18)";
+                    spec.innerBezel = "rgba(0,0,0,0.22)";
+                    spec.button0 = "rgba(210,214,222,1)";
+                    spec.button1 = "rgba(170,176,186,1)";
+                    break;
+                case "android_forest":
+                    spec.bodyGrad0 = "rgba(20,106,74,1)";
+                    spec.bodyGrad1 = "rgba(9,34,24,1)";
+                    spec.stroke = "rgba(255,255,255,0.10)";
+                    spec.rimLight = "rgba(255,255,255,0.22)";
+                    spec.rimDark = "rgba(0,0,0,0.32)";
+                    break;
+                case "android_pixel":
+                    // Slightly chunkier bezel look
+                    spec.bezelFrac = 0.034;
+                    spec.bodyGrad0 = "rgba(32,34,40,1)";
+                    spec.bodyGrad1 = "rgba(10,10,12,1)";
+                    spec.stroke = "rgba(255,255,255,0.09)";
+                    spec.rimLight = "rgba(255,255,255,0.20)";
+                    spec.rimDark = "rgba(0,0,0,0.36)";
+                    break;
+            }
+
+            return spec;
+        }
+
+        function gcd(a, b) {
+            var x = Math.abs(a | 0);
+            var y = Math.abs(b | 0);
+            while (y) {
+                var t = x % y;
+                x = y;
+                y = t;
+            }
+            return x || 1;
+        }
+
+        function ratioLabel(w, h) {
+            if (!w || !h) return "";
+            var g = gcd(w, h);
+            return (w / g) + ":" + (h / g);
+        }
+
+        function approxEqual(a, b, eps) {
+            return Math.abs(a - b) <= eps;
+        }
+
+        function googlePlayHint(opts, screenCount, playType) {
+            var w = opts.outW || 0;
+            var h = opts.outH || 0;
+            var label = ratioLabel(w, h);
+            var isPortrait = h >= w;
+            var aspect = (h > 0) ? (w / h) : 0;
+
+            // Ratios: portrait 9:16 (0.5625), landscape 16:9 (1.777...)
+            var is916 = approxEqual(aspect, 9 / 16, 0.01);
+            var is169 = approxEqual((w > 0 && h > 0) ? (w / h) : 0, 16 / 9, 0.01);
+
+            var minOk = true;
+            var ratioOk = (is916 || is169);
+            var ratioText = ratioOk ? label : (label ? (label + " (not 9:16 or 16:9)") : "unknown");
+
+            if (isPortrait) {
+                // portrait min 1080x1920
+                minOk = (w >= 1080 && h >= 1920);
+            } else {
+                // landscape min 1920x1080
+                minOk = (w >= 1920 && h >= 1080);
+            }
+
+            var needed = (playType === "game") ? 3 : 4;
+            var countOk = screenCount >= needed;
+
+            var parts = [];
+            parts.push("Google Play check: " + (ratioOk ? "ratio OK" : "ratio not OK") + " • " + ratioText);
+            parts.push("Resolution: " + w + "×" + h + (minOk ? " (meets min)" : " (below min)"));
+            parts.push("Screens: " + screenCount + " (need " + needed + "+ for " + (playType === "game" ? "games" : "apps") + ")");
+
+            return {
+                ratioOk: ratioOk,
+                minOk: minOk,
+                countOk: countOk,
+                text: parts.join(" • ")
+            };
+        }
+
+        function isIosAcceptedSize(w, h) {
+            var key = w + "x" + h;
+            return key === "1260x2736" ||
+                key === "1290x2796" ||
+                key === "1320x2868" ||
+                key === "1284x2778" ||
+                key === "1242x2688" ||
+                key === "1179x2556" ||
+                key === "1206x2622" ||
+                key === "1170x2532" ||
+                key === "1125x2436" ||
+                key === "1080x2340" ||
+                key === "1242x2208" ||
+                key === "750x1334";
+        }
+
+        function iosHint(opts) {
+            var w = opts.outW || 0;
+            var h = opts.outH || 0;
+            var ok = isIosAcceptedSize(w, h);
+            var label = ratioLabel(w, h);
+            return {
+                ok: ok,
+                text: "iOS App Store check: " + (ok ? "accepted size" : "not an accepted size") +
+                    " • " + w + "×" + h + (label ? (" • ratio " + label) : "")
+            };
+        }
+
+        function getActiveScreen() {
+            return (activeIndex >= 0 && activeIndex < project.screens.length) ? project.screens[activeIndex] : null;
+        }
+
+        function exportProjectJson() {
+            var safe = {
+                version: project.version,
+                updatedAt: new Date().toISOString(),
+                activeIndex: activeIndex,
+                platform: project.platform,
+                playType: project.playType,
+                screens: project.screens.map(function (s) {
+                    return {
+                        id: s.id,
+                        name: s.name,
+                        opts: s.opts
+                    };
+                })
+            };
+            return JSON.stringify(safe, null, 2);
+        }
+
+        function syncProjectJson() {
+            project.platform = elPlatform && elPlatform.value ? elPlatform.value : (project.platform || "android");
+            project.playType = elPlayType && elPlayType.value ? elPlayType.value : (project.playType || "app");
+            window.__asgProjectJson = exportProjectJson();
+            elCopyProjectJson.disabled = project.screens.length === 0;
+        }
+
+        function refreshActiveMarkers() {
+            var thumbs = elThumbRow.querySelectorAll("[data-asg-idx]");
+            thumbs.forEach(function (t) {
+                t.classList.toggle("active", parseInt(t.getAttribute("data-asg-idx"), 10) === activeIndex);
+            });
+        }
+
+        function updateButtons() {
+            var hasActive = !!getActiveScreen();
+            elDownloadLow.disabled = !hasActive;
+            elDownloadHigh.disabled = !hasActive;
+            elCopyProjectJson.disabled = project.screens.length === 0;
+            if (elApplyAll) elApplyAll.disabled = !hasActive || project.screens.length < 2;
+        }
+
+        function clearAll() {
+            project.screens.forEach(function (s) {
+                if (s && s.image && s.image.url) {
+                    try { URL.revokeObjectURL(s.image.url); } catch (e) { }
+                }
+            });
+            project.screens = [];
+            activeIndex = -1;
+            elThumbRow.innerHTML = "";
+            updateButtons();
+            syncProjectJson();
+            elStatus.textContent = "";
+            previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+        }
+
+        function addImageFromBlob(blob) {
+            return new Promise(function (resolve, reject) {
+                var url = URL.createObjectURL(blob);
+                var img = new Image();
+                img.onload = function () {
+                    resolve({ img: img, url: url, name: (blob && blob.name) ? blob.name : "screenshot.png" });
+                };
+                img.onerror = function () {
+                    URL.revokeObjectURL(url);
+                    reject(new Error("Failed to load image"));
+                };
+                img.src = url;
+            });
+        }
+
+        function computeScreenBox(outW, outH, img, opts) {
+            var pad = getBasePad(outW, outH);
+
+            var title = (opts.title || "").trim();
+            var subtitle = (opts.subtitle || "").trim();
+            var headerH = 0;
+            if (title || subtitle) headerH = Math.floor(outH * 0.18);
+
+            var frameSpec = getFrameSpec(opts.frame || "none");
+            var frameKind = frameSpec.base;
+
+            var contentX = pad;
+            var contentY = pad + (headerH ? Math.round(headerH * 0.38) : 0);
+            var contentW = outW - pad * 2;
+            var contentH = outH - pad * 2 - headerH;
+            contentH = Math.max(10, contentH);
+
+            var deviceX = contentX;
+            var deviceY = contentY;
+            var deviceW = contentW;
+            var deviceH = contentH;
+
+            var bezelFrac = frameSpec.bezelFrac || 0;
+
+            if (frameKind !== "none") {
+                var imgAspect = img.width / img.height;
+                imgAspect = (imgAspect > 0 && Number.isFinite(imgAspect)) ? imgAspect : (9 / 19.5);
+
+                var w = contentW;
+                var h = contentH;
+                var b = Math.round(Math.min(w, h) * bezelFrac);
+
+                for (var iter = 0; iter < 2; iter++) {
+                    b = clamp(b, 0, Math.round(Math.min(w, h) * 0.10));
+
+                    var screenW1 = Math.max(10, w - 2 * b);
+                    var screenH1 = Math.max(10, screenW1 / imgAspect);
+                    var deviceH1 = screenH1 + 2 * b;
+
+                    if (deviceH1 <= contentH) {
+                        h = deviceH1;
+                    } else {
+                        h = contentH;
+                        var screenH2 = Math.max(10, h - 2 * b);
+                        var screenW2 = Math.max(10, screenH2 * imgAspect);
+                        w = Math.min(contentW, screenW2 + 2 * b);
+                    }
+
+                    b = Math.round(Math.min(w, h) * bezelFrac);
+                }
+
+                deviceW = Math.max(10, Math.round(w));
+                deviceH = Math.max(10, Math.round(h));
+                deviceX = Math.round(contentX + (contentW - deviceW) / 2);
+                deviceY = Math.round(contentY + (contentH - deviceH) / 2);
+            }
+
+            // Device scaling (affects bezel + screen size)
+            if (frameKind !== "none") {
+                var ds = (typeof opts.deviceScale === "number") ? opts.deviceScale : 100;
+                ds = clamp(ds, SCALE_MIN, SCALE_MAX) / 100;
+                var cx = deviceX + deviceW / 2;
+                var cy = deviceY + deviceH / 2;
+                deviceW = deviceW * ds;
+                deviceH = deviceH * ds;
+                deviceX = cx - deviceW / 2;
+                deviceY = cy - deviceH / 2;
+            }
+
+            var bezel = 0;
+            if (frameKind !== "none") bezel = Math.round(Math.min(deviceW, deviceH) * (frameSpec.bezelFrac || 0));
+            bezel = clamp(bezel, 0, Math.round(Math.min(deviceW, deviceH) * 0.07));
+
+            var screenW = Math.max(10, deviceW - bezel * 2);
+            var screenH = Math.max(10, deviceH - bezel * 2);
+            return {
+                frameKind: frameKind,
+                contentW: contentW,
+                contentH: contentH,
+                screenW: screenW,
+                screenH: screenH
+            };
+        }
+
+        var FEATURE_3D = false;
+        var __threeRenderer = null;
+        var __last3dInfo = { tried: false, ok: false, reason: "" };
+
+        function webglAvailable() {
+            try {
+                var c = document.createElement("canvas");
+                return !!(c.getContext("webgl") || c.getContext("experimental-webgl"));
+            } catch (e) {
+                return false;
+            }
+        }
+
+        var __threeLoadPromise = null;
+        function ensureThreeLoaded() {
+            if (window.THREE && typeof window.THREE.WebGLRenderer === "function") return Promise.resolve(true);
+            if (__threeLoadPromise) return __threeLoadPromise;
+
+            // Three.js r164+ no longer ships a global UMD `three.min.js` build on npm CDNs.
+            // Load the ESM build and attach it to `window.THREE` for the rest of this tool.
+            var sources = [
+                "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.min.js",
+                "https://unpkg.com/three@0.164.1/build/three.module.min.js",
+                "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.164.1/three.module.min.js"
+            ];
+
+            __threeLoadPromise = new Promise(function (resolve) {
+                function tryImport(i) {
+                    if (window.THREE && typeof window.THREE.WebGLRenderer === "function") return resolve(true);
+                    if (i >= sources.length) return resolve(false);
+
+                    var src = sources[i];
+                    Promise.resolve()
+                        .then(function () { return import(src); })
+                        .then(function (mod) {
+                            // ESM namespace becomes our THREE "global"
+                            window.THREE = mod;
+                            return true;
+                        })
+                        .then(function () {
+                            if (window.THREE && typeof window.THREE.WebGLRenderer === "function") return resolve(true);
+                            tryImport(i + 1);
+                        })
+                        .catch(function () { tryImport(i + 1); });
+                }
+                tryImport(0);
+            });
+
+            return __threeLoadPromise;
+        }
+
+        function buildDeviceLayerCanvas(outW, outH, img, opts, cropRect) {
+            var rs = (typeof opts.__renderScale === "number" && opts.__renderScale > 0) ? opts.__renderScale : 1;
+            rs = clamp(rs, 1, 4);
+
+            var c = document.createElement("canvas");
+            c.width = Math.max(1, Math.round(outW * rs));
+            c.height = Math.max(1, Math.round(outH * rs));
+
+            var cctx = c.getContext("2d");
+            cctx.setTransform(1, 0, 0, 1, 0, 0);
+            cctx.scale(rs, rs);
+
+            // Render only the device layer: no background, no text. Also keep the texture un-rotated;
+            // the 3D pass applies roll + tilt to avoid double-rotation.
+            var layerOpts = Object.assign({}, opts, {
+                __layer: "deviceOnly",
+                enable3d: false,
+                tiltX: 0,
+                tiltY: 0,
+                rotation: 0
+            });
+            renderTo(cctx, outW, outH, img, layerOpts);
+
+            if (!cropRect) return c;
+
+            var cx = clamp(Math.round(cropRect.x || 0), 0, outW);
+            var cy = clamp(Math.round(cropRect.y || 0), 0, outH);
+            var cw = clamp(Math.round(cropRect.w || outW), 1, outW);
+            var ch = clamp(Math.round(cropRect.h || outH), 1, outH);
+
+            // Clamp crop to bounds.
+            if (cx + cw > outW) cw = Math.max(1, outW - cx);
+            if (cy + ch > outH) ch = Math.max(1, outH - cy);
+
+            var cc = document.createElement("canvas");
+            cc.width = Math.max(1, Math.round(cw * rs));
+            cc.height = Math.max(1, Math.round(ch * rs));
+            var ccx = cc.getContext("2d");
+            ccx.drawImage(c, Math.round(cx * rs), Math.round(cy * rs), Math.round(cw * rs), Math.round(ch * rs), 0, 0, cc.width, cc.height);
+            return cc;
+        }
+
+        function drawDevice3dFromLayer(ctx, outW, outH, pivotCx, pivotCy, objW, objH, deviceLayerCanvas, opts) {
+            var THREE = window.THREE;
+            if (!THREE || typeof THREE.WebGLRenderer !== "function") {
+                __last3dInfo = { tried: true, ok: false, reason: "Three.js not loaded yet (toggle 3D to load)" };
+                return false;
+            }
+
+            if (!webglAvailable()) {
+                __last3dInfo = { tried: true, ok: false, reason: "WebGL not available in this browser/device" };
+                return false;
+            }
+
+            if (!__threeRenderer) {
+                try {
+                    __threeRenderer = new THREE.WebGLRenderer({
+                        alpha: true,
+                        antialias: true,
+                        preserveDrawingBuffer: true
+                    });
+                } catch (e) {
+                    __last3dInfo = { tried: true, ok: false, reason: "WebGLRenderer init failed: " + (e && e.message ? e.message : String(e)) };
+                    return false;
+                }
+            }
+
+            var rs = (typeof opts.__renderScale === "number" && opts.__renderScale > 0) ? opts.__renderScale : 1;
+            rs = clamp(rs, 1, 4);
+
+            __threeRenderer.setSize(Math.round(outW * rs), Math.round(outH * rs), false);
+            __threeRenderer.setClearColor(0x000000, 0);
+
+            var scene = new THREE.Scene();
+
+            var fov = 35;
+            var camera = new THREE.PerspectiveCamera(fov, outW / outH, 1, 10000);
+            camera.position.z = ((outH / 2) / Math.tan((fov * Math.PI) / 360)) + 200;
+            scene.add(camera);
+
+            var tex = new THREE.CanvasTexture(deviceLayerCanvas);
+            if (tex && (typeof tex.colorSpace !== "undefined") && THREE.SRGBColorSpace) {
+                tex.colorSpace = THREE.SRGBColorSpace;
+            }
+            tex.needsUpdate = true;
+
+            var frontMat = new THREE.MeshBasicMaterial({ map: tex, transparent: true });
+            var sideMat = new THREE.MeshPhongMaterial({
+                color: 0x1c1c1f,
+                shininess: 120,
+                specular: 0x444444
+            });
+
+            var mats = [sideMat, sideMat, sideMat, sideMat, frontMat, sideMat]; // +x,-x,+y,-y,+z,-z
+
+            var depthPx = clamp((typeof opts.depth === "number") ? opts.depth : 24, 0, 90);
+            var geom = new THREE.BoxGeometry(objW, objH, Math.max(0.1, depthPx));
+            var mesh = new THREE.Mesh(geom, mats);
+
+            var amb = new THREE.AmbientLight(0xffffff, 0.75);
+            scene.add(amb);
+            var dir = new THREE.DirectionalLight(0xffffff, 0.55);
+            dir.position.set(0.35, 0.65, 1.0);
+            scene.add(dir);
+
+            // Place the object so its center matches the 2D pivot, then rotate around its center.
+            var group = new THREE.Group();
+            var gx = pivotCx - outW / 2;
+            var gy = -(pivotCy - outH / 2);
+            group.position.set(gx, gy, 0);
+            group.add(mesh);
+
+            var rx = ((typeof opts.tiltX === "number") ? opts.tiltX : 0) * Math.PI / 180;
+            var ry = ((typeof opts.tiltY === "number") ? opts.tiltY : 0) * Math.PI / 180;
+            var rz = ((typeof opts.rotation === "number") ? opts.rotation : 0) * Math.PI / 180;
+            group.rotation.set(rx, ry, rz);
+            scene.add(group);
+
+            __threeRenderer.render(scene, camera);
+
+            // The 2D context may be scaled (high-res export). Draw in base units.
+            ctx.drawImage(__threeRenderer.domElement, 0, 0, outW, outH);
+
+            tex.dispose();
+            frontMat.dispose();
+            sideMat.dispose();
+            geom.dispose();
+            __last3dInfo = { tried: true, ok: true, reason: "" };
+            return true;
+        }
+
+        function renderTo(ctx, outW, outH, img, opts) {
+            ctx.clearRect(0, 0, outW, outH);
+
+            var layer = opts.__layer || "full"; // "full" | "deviceOnly"
+
+            if (layer !== "deviceOnly") {
+                var bgMode = opts.bgMode || "gradient";
+                if (bgMode === "solid") {
+                    ctx.fillStyle = opts.bgSolid || opts.bgA || "#0d6efd";
+                    ctx.fillRect(0, 0, outW, outH);
+                } else {
+                    var dir = opts.bgDir || "tlbr";
+                    var grad;
+                    if (dir === "radial") {
+                        var r = Math.max(outW, outH) * 0.75;
+                        grad = ctx.createRadialGradient(outW * 0.35, outH * 0.25, 10, outW * 0.55, outH * 0.55, r);
+                    } else if (dir === "trbl") {
+                        grad = ctx.createLinearGradient(outW, 0, 0, outH);
+                    } else if (dir === "tb") {
+                        grad = ctx.createLinearGradient(0, 0, 0, outH);
+                    } else if (dir === "lr") {
+                        grad = ctx.createLinearGradient(0, 0, outW, 0);
+                    } else {
+                        // tlbr
+                        grad = ctx.createLinearGradient(0, 0, outW, outH);
+                    }
+                    grad.addColorStop(0, opts.bgA || "#0d6efd");
+                    grad.addColorStop(1, opts.bgB || "#198754");
+                    ctx.fillStyle = grad;
+                    ctx.fillRect(0, 0, outW, outH);
+                }
+            }
+
+            var pad = getBasePad(outW, outH);
+
+            var title = (opts.title || "").trim();
+            var subtitle = (opts.subtitle || "").trim();
+
+            var headerH = 0;
+            if (title || subtitle) headerH = Math.floor(outH * 0.18);
+
+            var frameSpec = getFrameSpec(opts.frame || "none");
+            var frameKind = frameSpec.base;
+
+            var contentX = pad;
+            var contentY = pad + (headerH ? Math.round(headerH * 0.38) : 0);
+            var contentW = outW - pad * 2;
+            var contentH = outH - pad * 2 - headerH;
+            contentH = Math.max(10, contentH);
+
+            var deviceX = contentX;
+            var deviceY = contentY;
+            var deviceW = contentW;
+            var deviceH = contentH;
+
+            // If we're drawing a phone frame, size the device so its screen aspect matches the screenshot.
+            // This avoids the "device resolution vs screenshot resolution" mismatch (letterboxing / odd scaling).
+            var bezelFrac = frameSpec.bezelFrac || 0;
+
+            if (frameKind !== "none") {
+                var imgAspect = img.width / img.height;
+                imgAspect = (imgAspect > 0 && Number.isFinite(imgAspect)) ? imgAspect : (9 / 19.5);
+
+                // Solve for deviceW/deviceH inside content while keeping (deviceW-2b)/(deviceH-2b) == imgAspect.
+                // b depends on device size, so do a tiny fixed-point iteration.
+                var w = contentW;
+                var h = contentH;
+                var b = Math.round(Math.min(w, h) * bezelFrac);
+
+                for (var iter = 0; iter < 2; iter++) {
+                    b = clamp(b, 0, Math.round(Math.min(w, h) * 0.10));
+
+                    // Try using full width first.
+                    var screenW1 = Math.max(10, w - 2 * b);
+                    var screenH1 = Math.max(10, screenW1 / imgAspect);
+                    var deviceH1 = screenH1 + 2 * b;
+
+                    if (deviceH1 <= contentH) {
+                        h = deviceH1;
+                    } else {
+                        // Otherwise constrain by height.
+                        h = contentH;
+                        var screenH2 = Math.max(10, h - 2 * b);
+                        var screenW2 = Math.max(10, screenH2 * imgAspect);
+                        w = Math.min(contentW, screenW2 + 2 * b);
+                    }
+
+                    b = Math.round(Math.min(w, h) * bezelFrac);
+                }
+
+                deviceW = Math.max(10, Math.round(w));
+                deviceH = Math.max(10, Math.round(h));
+                deviceX = Math.round(contentX + (contentW - deviceW) / 2);
+                deviceY = Math.round(contentY + (contentH - deviceH) / 2);
+            }
+
+            // Device scaling (scales the whole phone + screen together)
+            var dsRender = (typeof opts.deviceScale === "number") ? opts.deviceScale : 100;
+            dsRender = clamp(dsRender, SCALE_MIN, SCALE_MAX) / 100;
+            if (frameKind !== "none") {
+                var cxR = deviceX + deviceW / 2;
+                var cyR = deviceY + deviceH / 2;
+                deviceW = deviceW * dsRender;
+                deviceH = deviceH * dsRender;
+                deviceX = cxR - deviceW / 2;
+                deviceY = cyR - deviceH / 2;
+            }
+
+            // Position offsets:
+            // - When a frame is used, move the entire device (border + screenshot) together.
+            // - Without frame, offsets pan the screenshot itself.
+            var oxVal = (typeof opts.offsetX === "number") ? opts.offsetX : 0;
+            var oyVal = (typeof opts.offsetY === "number") ? opts.offsetY : 0;
+            var offsetX = clamp(readFloat({ value: String(oxVal) }, 0), -PAN_MAX, PAN_MAX);
+            var offsetY = clamp(readFloat({ value: String(oyVal) }, 0), -PAN_MAX, PAN_MAX);
+
+            if (frameKind !== "none") {
+                deviceX += (offsetX / 100) * contentW;
+                deviceY += (offsetY / 100) * contentH;
+
+                // Allow pushing device partly off-canvas (keep a small sliver visible).
+                var minVisiblePxD = Math.max(2, Math.round(Math.min(deviceW, deviceH) * 0.02));
+                var minDX = (-deviceW) + minVisiblePxD;
+                var maxDX = outW - minVisiblePxD;
+                var minDY = (-deviceH) + minVisiblePxD;
+                var maxDY = outH - minVisiblePxD;
+                deviceX = clamp(deviceX, minDX, maxDX);
+                deviceY = clamp(deviceY, minDY, maxDY);
+            }
+
+            var bezel = 0;
+            if (frameKind !== "none") bezel = Math.round(Math.min(deviceW, deviceH) * (frameSpec.bezelFrac || 0));
+            bezel = clamp(bezel, 0, Math.round(Math.min(deviceW, deviceH) * 0.07));
+
+            var screenX = deviceX + bezel;
+            var screenY = deviceY + bezel;
+            var screenW = deviceW - bezel * 2;
+            var screenH = deviceH - bezel * 2;
+            screenW = Math.max(10, screenW);
+            screenH = Math.max(10, screenH);
+
+            // Fit image into screen (contain / cover)
+            var fitMode = (opts.fit || "contain");
+            var scale = (fitMode === "cover")
+                ? Math.max(screenW / img.width, screenH / img.height)
+                : Math.min(screenW / img.width, screenH / img.height);
+
+            // If there's no device frame, use deviceScale as an image zoom control.
+            if (frameKind === "none") {
+                scale = scale * dsRender;
+            }
+            var drawW = img.width * scale;
+            var drawH = img.height * scale;
+            var drawX = screenX + (screenW - drawW) / 2;
+            var drawY = screenY + (screenH - drawH) / 2;
+
+            if (frameKind === "none") {
+                // Pan screenshot itself (keep a tiny sliver visible).
+                drawX += (offsetX / 100) * screenW;
+                drawY += (offsetY / 100) * screenH;
+
+                var minVisiblePx = Math.max(2, Math.round(Math.min(screenW, screenH) * 0.02));
+                var minX = (screenX - drawW) + minVisiblePx;
+                var maxX = (screenX + screenW) - minVisiblePx;
+                var minY = (screenY - drawH) + minVisiblePx;
+                var maxY = (screenY + screenH) - minVisiblePx;
+                drawX = clamp(drawX, minX, maxX);
+                drawY = clamp(drawY, minY, maxY);
+            }
+
+            // Shadow
+            var shadow = clamp(opts.shadow, 0, 100);
+            var r = clamp(opts.radius, 0, 1000);
+
+            var did3d = false;
+            __last3dInfo = { tried: false, ok: false, reason: "" };
+            if (layer !== "deviceOnly" && FEATURE_3D && opts.enable3d) {
+                try {
+                    var crop = (frameKind === "none")
+                        ? { x: drawX, y: drawY, w: drawW, h: drawH }
+                        : { x: deviceX, y: deviceY, w: deviceW, h: deviceH };
+
+                    var pivotCx3 = crop.x + crop.w / 2;
+                    var pivotCy3 = crop.y + crop.h / 2;
+                    var deviceLayer3 = buildDeviceLayerCanvas(outW, outH, img, opts, crop);
+                    did3d = drawDevice3dFromLayer(ctx, outW, outH, pivotCx3, pivotCy3, crop.w, crop.h, deviceLayer3, opts);
+                } catch (e) {
+                    __last3dInfo = { tried: true, ok: false, reason: "3D render failed: " + (e && e.message ? e.message : String(e)) };
+                    did3d = false;
+                }
+            }
+
+            if (!did3d && frameKind === "none") {
+                ctx.save();
+                ctx.shadowColor = "rgba(0,0,0,0.35)";
+                ctx.shadowBlur = shadow;
+                ctx.shadowOffsetY = Math.round(shadow * 0.35);
+
+                var rotDegImg = (typeof opts.rotation === "number") ? opts.rotation : 0;
+                var rotImg = rotDegImg * Math.PI / 180;
+                var cxImg = drawX + drawW / 2;
+                var cyImg = drawY + drawH / 2;
+
+                // Rotate the whole rounded-rect "card" (clip path rotates with it),
+                // so the image doesn't get cut when rotated.
+                ctx.save();
+                if (rotImg) {
+                    ctx.translate(cxImg, cyImg);
+                    ctx.rotate(rotImg);
+                    ctx.translate(-cxImg, -cyImg);
+                }
+
+                // Clip rounded corners for screenshot (in rotated coordinate space)
+                ctx.save();
+                roundedRectPath(ctx, drawX, drawY, drawW, drawH, r);
+                ctx.clip();
+                ctx.drawImage(img, drawX, drawY, drawW, drawH);
+                ctx.restore();
+
+                ctx.restore();
+
+                ctx.restore();
+            } else if (!did3d) {
+                var deviceRadius = Math.round(Math.min(deviceW, deviceH) * 0.115);
+                var screenRadius = Math.max(8, deviceRadius - Math.round(bezel * 0.65));
+
+                var rotDegDev = (typeof opts.rotation === "number") ? opts.rotation : 0;
+                var rotDev = rotDegDev * Math.PI / 180;
+                var cxDev = deviceX + deviceW / 2;
+                var cyDev = deviceY + deviceH / 2;
+                ctx.save();
+                if (rotDev) {
+                    ctx.translate(cxDev, cyDev);
+                    ctx.rotate(rotDev);
+                    ctx.translate(-cxDev, -cyDev);
+                }
+
+                // Phone body with shadow
+                ctx.save();
+                ctx.shadowColor = "rgba(0,0,0,0.40)";
+                ctx.shadowBlur = shadow;
+                ctx.shadowOffsetY = Math.round(shadow * 0.45);
+
+                var bodyGrad = ctx.createLinearGradient(deviceX, deviceY, deviceX + deviceW, deviceY + deviceH);
+                bodyGrad.addColorStop(0, frameSpec.bodyGrad0 || "rgba(18,22,28,1)");
+                bodyGrad.addColorStop(1, frameSpec.bodyGrad1 || "rgba(7,10,14,1)");
+                ctx.fillStyle = bodyGrad;
+                roundedRectPath(ctx, deviceX, deviceY, deviceW, deviceH, deviceRadius);
+                ctx.fill();
+                ctx.restore();
+
+                // Metallic rim (gives a more "real device" look)
+                ctx.save();
+                var rimGrad = ctx.createLinearGradient(deviceX, deviceY, deviceX + deviceW, deviceY + deviceH);
+                rimGrad.addColorStop(0, frameSpec.rimLight || "rgba(255,255,255,0.18)");
+                rimGrad.addColorStop(0.5, frameSpec.stroke || "rgba(255,255,255,0.10)");
+                rimGrad.addColorStop(1, frameSpec.rimDark || "rgba(0,0,0,0.40)");
+                ctx.strokeStyle = rimGrad;
+                ctx.lineWidth = Math.max(2, Math.round(Math.min(deviceW, deviceH) * 0.004));
+                roundedRectPath(ctx, deviceX + 1, deviceY + 1, deviceW - 2, deviceH - 2, deviceRadius - 1);
+                ctx.stroke();
+                ctx.restore();
+
+                // Inner bevel / bezel shading
+                ctx.save();
+                ctx.globalAlpha = 0.85;
+                ctx.strokeStyle = frameSpec.innerBezel || "rgba(0,0,0,0.45)";
+                ctx.lineWidth = Math.max(2, Math.round(Math.min(deviceW, deviceH) * 0.006));
+                var inset = Math.max(2, Math.round(ctx.lineWidth * 0.9));
+                roundedRectPath(ctx, deviceX + inset, deviceY + inset, deviceW - inset * 2, deviceH - inset * 2, deviceRadius - inset);
+                ctx.stroke();
+                ctx.restore();
+
+                // Screen background
+                ctx.save();
+                ctx.fillStyle = "rgba(0,0,0,1)";
+                roundedRectPath(ctx, screenX, screenY, screenW, screenH, screenRadius);
+                ctx.fill();
+                ctx.restore();
+
+                // Screenshot clipped to screen
+                ctx.save();
+                roundedRectPath(ctx, screenX, screenY, screenW, screenH, screenRadius);
+                ctx.clip();
+                ctx.drawImage(img, drawX, drawY, drawW, drawH);
+                ctx.restore();
+
+                // Screen glass reflection overlay
+                ctx.save();
+                roundedRectPath(ctx, screenX, screenY, screenW, screenH, screenRadius);
+                ctx.clip();
+                var glass = ctx.createLinearGradient(screenX, screenY, screenX + screenW, screenY + screenH);
+                glass.addColorStop(0, frameSpec.glass0 || "rgba(255,255,255,0.14)");
+                glass.addColorStop(0.35, "rgba(255,255,255,0.05)");
+                glass.addColorStop(1, frameSpec.glass1 || "rgba(255,255,255,0.00)");
+                ctx.fillStyle = glass;
+                ctx.globalCompositeOperation = "screen";
+                ctx.fillRect(screenX, screenY, screenW, screenH);
+                ctx.restore();
+
+                // Side buttons (simple but adds realism)
+                (function () {
+                    var btnW = Math.max(5, Math.round(Math.min(deviceW, deviceH) * 0.014));
+                    var btnR = Math.round(btnW / 2);
+                    var btnGrad = ctx.createLinearGradient(deviceX, deviceY, deviceX, deviceY + deviceH);
+                    btnGrad.addColorStop(0, frameSpec.button0 || "rgba(30,34,40,1)");
+                    btnGrad.addColorStop(1, frameSpec.button1 || "rgba(10,12,16,1)");
+
+                    function drawBtn(x, y, w, h) {
+                        ctx.save();
+                        ctx.fillStyle = btnGrad;
+                        roundedRectPath(ctx, x, y, w, h, btnR);
+                        ctx.fill();
+                        ctx.restore();
+                    }
+
+                    var top = deviceY + Math.round(deviceH * 0.22);
+                    if (frameKind === "ios") {
+                        // Volume (left) + power (right)
+                        drawBtn(deviceX - Math.round(btnW * 0.45), top, btnW, Math.round(deviceH * 0.08));
+                        drawBtn(deviceX - Math.round(btnW * 0.45), top + Math.round(deviceH * 0.10), btnW, Math.round(deviceH * 0.08));
+                        drawBtn(deviceX + deviceW - Math.round(btnW * 0.55), top + Math.round(deviceH * 0.06), btnW, Math.round(deviceH * 0.12));
+                    } else {
+                        // Android: power + volume (right)
+                        drawBtn(deviceX + deviceW - Math.round(btnW * 0.55), top + Math.round(deviceH * 0.06), btnW, Math.round(deviceH * 0.12));
+                        drawBtn(deviceX + deviceW - Math.round(btnW * 0.55), top + Math.round(deviceH * 0.20), btnW, Math.round(deviceH * 0.10));
+                    }
+                })();
+
+                // iOS notch + home indicator / Android punch-hole
+                if (frameKind === "ios") {
+                    var notchW = Math.round(screenW * 0.44);
+                    var notchH = Math.round(screenH * 0.065);
+                    var notchX = Math.round(screenX + (screenW - notchW) / 2);
+                    var notchY = Math.round(screenY - notchH * 0.10);
+                    var notchR = Math.round(notchH * 0.40);
+
+                    ctx.save();
+                    ctx.fillStyle = frameSpec.cutout || "rgba(0,0,0,1)";
+                    roundedRectPath(ctx, notchX, notchY, notchW, notchH, notchR);
+                    ctx.fill();
+
+                    // speaker pill
+                    ctx.fillStyle = frameSpec.speaker || "rgba(255,255,255,0.18)";
+                    var pillW = Math.round(notchW * 0.38);
+                    var pillH = Math.max(6, Math.round(notchH * 0.18));
+                    var pillX = notchX + Math.round((notchW - pillW) / 2);
+                    var pillY = notchY + Math.round(notchH * 0.32);
+                    roundedRectPath(ctx, pillX, pillY, pillW, pillH, Math.round(pillH / 2));
+                    ctx.fill();
+                    ctx.restore();
+
+                    // home indicator
+                    ctx.save();
+                    ctx.fillStyle = "rgba(255,255,255,0.22)";
+                    var hiW = Math.round(screenW * 0.32);
+                    var hiH = Math.max(8, Math.round(screenH * 0.012));
+                    var hiX = Math.round(screenX + (screenW - hiW) / 2);
+                    var hiY = Math.round(screenY + screenH - hiH - Math.round(screenH * 0.02));
+                    roundedRectPath(ctx, hiX, hiY, hiW, hiH, Math.round(hiH / 2));
+                    ctx.fill();
+                    ctx.restore();
+                } else {
+                    // Android punch-hole (top center)
+                    var holeR = Math.max(8, Math.round(Math.min(screenW, screenH) * 0.018));
+                    var holeX = Math.round(screenX + screenW / 2);
+                    var holeY = Math.round(screenY + holeR + Math.round(screenH * 0.018));
+                    ctx.save();
+                    ctx.fillStyle = frameSpec.cutout || "rgba(0,0,0,1)";
+                    ctx.beginPath();
+                    ctx.arc(holeX, holeY, holeR, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = frameSpec.stroke || "rgba(255,255,255,0.10)";
+                    ctx.lineWidth = Math.max(2, Math.round(holeR * 0.25));
+                    ctx.stroke();
+                    ctx.restore();
+                }
+
+                ctx.restore();
+            }
+
+            // Text
+            if (layer !== "deviceOnly" && (title || subtitle)) {
+                ctx.save();
+                var left = pad;
+                var right = outW - pad;
+                var baseX = outW / 2;
+
+                ctx.textAlign = "center";
+                ctx.textBaseline = "top";
+                ctx.shadowColor = "rgba(0,0,0,0.28)";
+                ctx.shadowBlur = Math.max(8, Math.round(outW * 0.006));
+                ctx.shadowOffsetY = Math.round(outW * 0.0025);
+
+                var fontKey = opts.font || "system";
+                var fontStack = getFontStack(fontKey);
+                var titleBase = Math.max(44, Math.round(outW * 0.055));
+                var subBase = Math.max(26, Math.round(outW * 0.032));
+
+                var tScale = (typeof opts.titleScale === "number") ? opts.titleScale : 100;
+                var sScale = (typeof opts.subtitleScale === "number") ? opts.subtitleScale : 100;
+                tScale = clamp(tScale, SCALE_MIN, TEXT_SCALE_MAX) / 100;
+                sScale = clamp(sScale, SCALE_MIN, TEXT_SCALE_MAX) / 100;
+
+                var titleSize = Math.max(12, Math.round(titleBase * tScale));
+                var subSize = Math.max(10, Math.round(subBase * sScale));
+
+                var tox = clamp((typeof opts.titleOffsetX === "number") ? opts.titleOffsetX : 0, -TEXT_PAN_MAX, TEXT_PAN_MAX);
+                var toy = clamp((typeof opts.titleOffsetY === "number") ? opts.titleOffsetY : 0, -TEXT_PAN_MAX, TEXT_PAN_MAX);
+                var sox = clamp((typeof opts.subtitleOffsetX === "number") ? opts.subtitleOffsetX : 0, -TEXT_PAN_MAX, TEXT_PAN_MAX);
+                var soy = clamp((typeof opts.subtitleOffsetY === "number") ? opts.subtitleOffsetY : 0, -TEXT_PAN_MAX, TEXT_PAN_MAX);
+
+                var titleX = baseX + (tox / 100) * outW;
+                var titleY = pad + (toy / 100) * outH;
+                var subtitleX = baseX + (sox / 100) * outW;
+                var subtitleY = (titleY + Math.round(titleSize * 1.15)) + (soy / 100) * outH;
+
+                if (title) {
+                    ctx.font = "800 " + titleSize + "px " + fontStack;
+                    ctx.fillStyle = (opts.titleColor || "#ffffff");
+                    ctx.fillText(title, titleX, titleY, right - left);
+                }
+
+                if (subtitle) {
+                    ctx.font = "600 " + subSize + "px " + fontStack;
+                    ctx.fillStyle = (opts.subtitleColor || "#e6f0ff");
+                    ctx.fillText(subtitle, subtitleX, subtitleY, right - left);
+                }
+
+                ctx.restore();
+            }
+        }
+
+        function collectOptions() {
+            var outW = clamp(readNumber(elW, 1290), 320, 4000);
+            var outH = clamp(readNumber(elH, 2796), 320, 6000);
+            return {
+                preset: elPreset.value || "custom",
+                outW: outW,
+                outH: outH,
+                font: elFont.value || "system",
+                title: elTitle.value || "",
+                subtitle: elSubtitle.value || "",
+                titleColor: elTitleColor ? (elTitleColor.value || "#ffffff") : "#ffffff",
+                subtitleColor: elSubtitleColor ? (elSubtitleColor.value || "#e6f0ff") : "#e6f0ff",
+                titleScale: clamp(readFloat(elTitleScale, 100), SCALE_MIN, TEXT_SCALE_MAX),
+                subtitleScale: clamp(readFloat(elSubtitleScale, 100), SCALE_MIN, TEXT_SCALE_MAX),
+                titleOffsetX: clamp(readFloat(elTitleOffsetX, 0), -TEXT_PAN_MAX, TEXT_PAN_MAX),
+                titleOffsetY: clamp(readFloat(elTitleOffsetY, 0), -TEXT_PAN_MAX, TEXT_PAN_MAX),
+                subtitleOffsetX: clamp(readFloat(elSubtitleOffsetX, 0), -TEXT_PAN_MAX, TEXT_PAN_MAX),
+                subtitleOffsetY: clamp(readFloat(elSubtitleOffsetY, 0), -TEXT_PAN_MAX, TEXT_PAN_MAX),
+                bgMode: elBgMode ? (elBgMode.value || "gradient") : "gradient",
+                bgDir: elBgDir ? (elBgDir.value || "tlbr") : "tlbr",
+                bgSolid: elBgSolid ? (elBgSolid.value || "#0d6efd") : "#0d6efd",
+                bgA: elBgA.value || "#0d6efd",
+                bgB: elBgB.value || "#198754",
+                radius: readNumber(elRadius, 34),
+                shadow: readNumber(elShadow, 26),
+                frame: elFrame.value || "none",
+                fit: elFit.value || "contain",
+                deviceScale: clamp(readFloat(elDeviceScale, 100), SCALE_MIN, SCALE_MAX),
+                rotation: clamp(readFloat(elRotation, 0), -90, 90),
+                enable3d: false,
+                tiltX: 0,
+                tiltY: 0,
+                depth: 24,
+                offsetX: clamp(readFloat(elOffsetX, 0), -PAN_MAX, PAN_MAX),
+                offsetY: clamp(readFloat(elOffsetY, 0), -PAN_MAX, PAN_MAX)
+            };
+        }
+
+        function applyOptionsToUi(opts) {
+            if (!opts) return;
+            elPreset.value = opts.preset || "custom";
+            elW.value = String(opts.outW || 1290);
+            elH.value = String(opts.outH || 2796);
+            elTitle.value = opts.title || "";
+            elSubtitle.value = opts.subtitle || "";
+            elFont.value = opts.font || "system";
+            if (elTitleColor) elTitleColor.value = opts.titleColor || "#ffffff";
+            if (elSubtitleColor) elSubtitleColor.value = opts.subtitleColor || "#e6f0ff";
+            if (elTitleScale) elTitleScale.value = String((typeof opts.titleScale === "number") ? opts.titleScale : 100);
+            if (elSubtitleScale) elSubtitleScale.value = String((typeof opts.subtitleScale === "number") ? opts.subtitleScale : 100);
+            if (elTitleOffsetX) elTitleOffsetX.value = String((typeof opts.titleOffsetX === "number") ? opts.titleOffsetX : 0);
+            if (elTitleOffsetY) elTitleOffsetY.value = String((typeof opts.titleOffsetY === "number") ? opts.titleOffsetY : 0);
+            if (elSubtitleOffsetX) elSubtitleOffsetX.value = String((typeof opts.subtitleOffsetX === "number") ? opts.subtitleOffsetX : 0);
+            if (elSubtitleOffsetY) elSubtitleOffsetY.value = String((typeof opts.subtitleOffsetY === "number") ? opts.subtitleOffsetY : 0);
+            if (elBgMode) elBgMode.value = opts.bgMode || "gradient";
+            if (elBgDir) elBgDir.value = opts.bgDir || "tlbr";
+            if (elBgSolid) elBgSolid.value = opts.bgSolid || "#0d6efd";
+            elBgA.value = opts.bgA || "#0d6efd";
+            elBgB.value = opts.bgB || "#198754";
+            elRadius.value = String((typeof opts.radius === "number") ? opts.radius : 34);
+            elShadow.value = String((typeof opts.shadow === "number") ? opts.shadow : 26);
+            elFrame.value = opts.frame || "none";
+            if (!elFrame.value) elFrame.value = "none";
+            if (elRotation) elRotation.value = String((typeof opts.rotation === "number") ? opts.rotation : 0);
+            if (el3dEnabled) el3dEnabled.checked = !!opts.enable3d;
+            if (elTiltX) elTiltX.value = String((typeof opts.tiltX === "number") ? opts.tiltX : 0);
+            if (elTiltY) elTiltY.value = String((typeof opts.tiltY === "number") ? opts.tiltY : 0);
+            if (elDepth) elDepth.value = String((typeof opts.depth === "number") ? opts.depth : 24);
+            elFit.value = opts.fit || "contain";
+            elDeviceScale.value = String((typeof opts.deviceScale === "number") ? opts.deviceScale : 100);
+            elOffsetX.value = String((typeof opts.offsetX === "number") ? opts.offsetX : 0);
+            elOffsetY.value = String((typeof opts.offsetY === "number") ? opts.offsetY : 0);
+            updateCustomSizeVisibility();
+            updateBackgroundVisibility();
+            update3dControls();
+        }
+
+        function commitActiveFromUi() {
+            var s = getActiveScreen();
+            if (!s) return;
+            s.opts = collectOptions();
+            syncProjectJson();
+        }
+
+        function scheduleRender() {
+            if (rafId) cancelAnimationFrame(rafId);
+            rafId = requestAnimationFrame(function () {
+                rafId = 0;
+                renderPreview();
+            });
+        }
+
+        function renderPreview() {
+            var s = getActiveScreen();
+            if (!s) return;
+            var item = s.image;
+            var opts = Object.assign({}, s.opts || collectOptions());
+
+            // Fit preview to both width + height so the full screen is visible without scrolling.
+            var maxPreviewW = 560;
+            var maxPreviewH = 560;
+            var scale = Math.min(1, maxPreviewW / opts.outW, maxPreviewH / opts.outH);
+            var pw = Math.max(260, Math.round(opts.outW * scale));
+            var ph = Math.max(260, Math.round(opts.outH * scale));
+
+            previewCanvas.width = pw;
+            previewCanvas.height = ph;
+
+            previewCtx.save();
+            previewCtx.scale(scale, scale);
+            renderTo(previewCtx, opts.outW, opts.outH, item.img, opts);
+            previewCtx.restore();
+            lastPreviewScale = scale;
+
+            var threeMsg = "";
+            if (opts.enable3d) {
+                threeMsg = FEATURE_3D
+                    ? (__last3dInfo && __last3dInfo.ok
+                        ? " • 3D: ON"
+                        : (" • 3D: FAILED (" + ((__last3dInfo && __last3dInfo.reason) ? __last3dInfo.reason : "unknown") + ")"))
+                    : " • 3D: DISABLED";
+            }
+
+            elStatus.textContent = "Active: " + (s && s.name ? s.name : (item.name || ("Screenshot " + (activeIndex + 1)))) +
+                " • Output: " + opts.outW + "×" + opts.outH +
+                " • Frame: " + (opts.frame || "none") +
+                " • Fit: " + (opts.fit || "contain") +
+                " • Pos: (" + (typeof opts.offsetX === "number" ? opts.offsetX : 0) + "%, " + (typeof opts.offsetY === "number" ? opts.offsetY : 0) + "%)" +
+                threeMsg +
+                " • Preview scale: " + Math.round(scale * 100) + "% • Screens: " + project.screens.length;
+
+            var platform = (elPlatform && elPlatform.value) ? elPlatform.value : (project.platform || "android");
+            if (platform === "ios") {
+                var hintIos = iosHint(opts);
+                elPlayHints.textContent = hintIos.text;
+            } else {
+                var hint = googlePlayHint(opts, project.screens.length, (elPlayType && elPlayType.value) ? elPlayType.value : (project.playType || "app"));
+                elPlayHints.textContent = hint.text;
+            }
+        }
+
+        function exportPng(scale, filenameBase) {
+            commitActiveFromUi();
+            var s = getActiveScreen();
+            if (!s) return;
+            var item = s.image;
+            var opts = Object.assign({}, s.opts || collectOptions());
+            opts.__renderScale = scale;
+
+            var outW = opts.outW * scale;
+            var outH = opts.outH * scale;
+            var canvas = document.createElement("canvas");
+            canvas.width = outW;
+            canvas.height = outH;
+            var ctx = canvas.getContext("2d");
+            ctx.scale(scale, scale);
+            renderTo(ctx, opts.outW, opts.outH, item.img, opts);
+
+            canvas.toBlob(function (blob) {
+                if (!blob) return;
+                var url = URL.createObjectURL(blob);
+                var a = document.createElement("a");
+                a.href = url;
+                var base = filenameBase + "-" + opts.outW + "x" + opts.outH + (scale === 2 ? "@@2x" : "");
+                a.download = base + ".png";
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                setTimeout(function () { URL.revokeObjectURL(url); }, 3000);
+            }, "image/png");
+        }
+
+        function makeSamplePngBlob() {
+            return new Promise(function (resolve) {
+                var w = 1170, h = 2532;
+                var c = document.createElement("canvas");
+                c.width = w; c.height = h;
+                var ctx = c.getContext("2d");
+                var g = ctx.createLinearGradient(0, 0, w, h);
+                g.addColorStop(0, "#121826");
+                g.addColorStop(1, "#3b82f6");
+                ctx.fillStyle = g;
+                ctx.fillRect(0, 0, w, h);
+                ctx.fillStyle = "rgba(255,255,255,0.95)";
+                ctx.font = "800 120px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
+                ctx.fillText("DailyTools", 90, 140);
+                ctx.font = "600 52px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
+                ctx.fillStyle = "rgba(255,255,255,0.88)";
+                ctx.fillText("Sample screenshot", 90, 300);
+                ctx.fillStyle = "rgba(255,255,255,0.20)";
+                ctx.fillRect(90, 420, w - 180, h - 600);
+                c.toBlob(function (blob) {
+                    blob.name = "sample.png";
+                    resolve(blob);
+                }, "image/png");
+            });
+        }
+
+        function setActive(i) {
+            activeIndex = i;
+            var s = getActiveScreen();
+            if (s && s.opts) applyOptionsToUi(s.opts);
+            refreshActiveMarkers();
+            updateButtons();
+            syncProjectJson();
+            scheduleRender();
+        }
+
+        function defaultOptsForNewScreen() {
+            var o = collectOptions();
+            // New screen should start blank so users can type per-screen copy.
+            o.title = "";
+            o.subtitle = "";
+            o.offsetX = 0;
+            o.offsetY = 0;
+            o.font = "system";
+            o.deviceScale = 100;
+            o.rotation = 0;
+            o.bgMode = "gradient";
+            o.bgDir = "tlbr";
+            o.bgSolid = "#0d6efd";
+            o.titleColor = "#ffffff";
+            o.subtitleColor = "#e6f0ff";
+            o.titleScale = 100;
+            o.subtitleScale = 100;
+            o.titleOffsetX = 0;
+            o.titleOffsetY = 0;
+            o.subtitleOffsetX = 0;
+            o.subtitleOffsetY = 0;
+            o.enable3d = false;
+            o.tiltX = 0;
+            o.tiltY = 0;
+            o.depth = 24;
+            return o;
+        }
+
+        function makeId() {
+            return "scr_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8);
+        }
+
+        function addScreenFromImage(imageObj) {
+            project.screens.push({
+                id: makeId(),
+                name: imageObj.name || ("Screenshot " + (project.screens.length + 1)),
+                image: imageObj,
+                opts: defaultOptsForNewScreen()
+            });
+        }
+
+        function rebuildThumbRow() {
+            elThumbRow.innerHTML = "";
+            project.screens.forEach(function (s, idx) {
+                var d = document.createElement("div");
+                d.className = "asg-thumb" + (idx === activeIndex ? " active" : "");
+                d.setAttribute("data-asg-idx", String(idx));
+                var im = document.createElement("img");
+                im.alt = s.name || ("Screenshot " + (idx + 1));
+                im.src = s.image.url;
+                d.appendChild(im);
+                d.addEventListener("click", function () { setActive(idx); });
+                elThumbRow.appendChild(d);
+            });
+        }
+
+        function rebuildAllLists() {
+            rebuildThumbRow();
+            refreshActiveMarkers();
+        }
+
+        function handleUiChanged() {
+            update3dControls();
+            if (el3dEnabled && el3dEnabled.checked && (!window.THREE || typeof window.THREE.WebGLRenderer !== "function")) {
+                ensureThreeLoaded().then(function () { scheduleRender(); });
+            }
+            commitActiveFromUi();
+            refreshActiveMarkers();
+            updateButtons();
+            scheduleRender();
+        }
+
+        function applyPlatformUi(platform) {
+            if (!platform) platform = "android";
+            if (elPlayTypeRow) elPlayTypeRow.style.display = (platform === "android") ? "" : "none";
+            rebuildFrameSelect(platform);
+        }
+
+        elPreset.addEventListener("change", function () {
+            updateCustomSizeVisibility();
+            var dims = getPresetDims(elPreset.value);
+            if (dims && elPreset.value !== "custom") {
+                elW.value = String(dims.w);
+                elH.value = String(dims.h);
+            }
+            handleUiChanged();
+        });
+
+        elPlatform.addEventListener("change", function () {
+            var platform = elPlatform.value || "android";
+            project.platform = platform;
+            applyPlatformUi(platform);
+            rebuildPresetSelect(platform);
+            updateCustomSizeVisibility();
+
+            var dims = getPresetDims(elPreset.value);
+            if (dims && elPreset.value !== "custom") {
+                elW.value = String(dims.w);
+                elH.value = String(dims.h);
+            }
+
+            handleUiChanged();
+        });
+
+        elPlayType.addEventListener("change", function () {
+            syncProjectJson();
+            scheduleRender();
+        });
+
+        [
+            elW, elH,
+            elTitle, elSubtitle,
+            elFont,
+            elTitleColor, elSubtitleColor,
+            elTitleScale, elSubtitleScale,
+            elTitleOffsetX, elTitleOffsetY,
+            elSubtitleOffsetX, elSubtitleOffsetY,
+            elBgMode, elBgDir, elBgSolid, elBgA, elBgB,
+            elRadius, elShadow, elFrame, elRotation, elFit,
+            el3dEnabled, elTiltX, elTiltY, elDepth,
+            elDeviceScale, elOffsetX, elOffsetY
+        ].forEach(function (el) {
+            if (!el) return;
+            el.addEventListener("input", handleUiChanged);
+            el.addEventListener("change", handleUiChanged);
+        });
+
+        if (elBgMode) {
+            elBgMode.addEventListener("change", function () {
+                updateBackgroundVisibility();
+            });
+        }
+
+        function setTitleOffsets(x, y) {
+            if (elTitleOffsetX) elTitleOffsetX.value = String(clamp(x, -TEXT_PAN_MAX, TEXT_PAN_MAX));
+            if (elTitleOffsetY) elTitleOffsetY.value = String(clamp(y, -TEXT_PAN_MAX, TEXT_PAN_MAX));
+            handleUiChanged();
+        }
+
+        function setSubtitleOffsets(x, y) {
+            if (elSubtitleOffsetX) elSubtitleOffsetX.value = String(clamp(x, -TEXT_PAN_MAX, TEXT_PAN_MAX));
+            if (elSubtitleOffsetY) elSubtitleOffsetY.value = String(clamp(y, -TEXT_PAN_MAX, TEXT_PAN_MAX));
+            handleUiChanged();
+        }
+
+        if (elTitleCenter) elTitleCenter.addEventListener("click", function () { setTitleOffsets(0, 0); });
+        if (elSubtitleCenter) elSubtitleCenter.addEventListener("click", function () { setSubtitleOffsets(0, 0); });
+
+        function setOffsets(x, y) {
+            elOffsetX.value = String(clamp(x, -PAN_MAX, PAN_MAX));
+            elOffsetY.value = String(clamp(y, -PAN_MAX, PAN_MAX));
+            handleUiChanged();
+        }
+
+        elPosCenter.addEventListener("click", function () { setOffsets(0, 0); });
+        elPosTop.addEventListener("click", function () { setOffsets(readFloat(elOffsetX, 0), -PAN_MAX); });
+        elPosBottom.addEventListener("click", function () { setOffsets(readFloat(elOffsetX, 0), PAN_MAX); });
+        elPosLeft.addEventListener("click", function () { setOffsets(-PAN_MAX, readFloat(elOffsetY, 0)); });
+        elPosRight.addEventListener("click", function () { setOffsets(PAN_MAX, readFloat(elOffsetY, 0)); });
+
+        // Drag to move (updates the same offsets used for export).
+        // Normal drag = device/screenshot. Shift = Title. Alt+Shift = Subtitle.
+        var drag = { active: false, lastX: 0, lastY: 0, mode: "device" };
+        previewCanvas.addEventListener("pointerdown", function (e) {
+            if (!getActiveScreen()) return;
+            drag.active = true;
+            drag.mode = (e.shiftKey && e.altKey) ? "subtitle" : (e.shiftKey ? "title" : "device");
+            drag.lastX = e.clientX;
+            drag.lastY = e.clientY;
+            try { previewCanvas.setPointerCapture(e.pointerId); } catch (err) { }
+        });
+        previewCanvas.addEventListener("pointermove", function (e) {
+            if (!drag.active) return;
+            var s = getActiveScreen();
+            if (!s || !s.opts) return;
+
+            var rect = previewCanvas.getBoundingClientRect();
+            var pxRatioX = rect.width > 0 ? (previewCanvas.width / rect.width) : 1;
+            var pxRatioY = rect.height > 0 ? (previewCanvas.height / rect.height) : 1;
+
+            var dxCanvas = (e.clientX - drag.lastX) * pxRatioX;
+            var dyCanvas = (e.clientY - drag.lastY) * pxRatioY;
+            drag.lastX = e.clientX;
+            drag.lastY = e.clientY;
+
+            var dxOut = dxCanvas / (lastPreviewScale || 1);
+            var dyOut = dyCanvas / (lastPreviewScale || 1);
+
+            if (drag.mode === "title" || drag.mode === "subtitle") {
+                var oxKey = (drag.mode === "title") ? "titleOffsetX" : "subtitleOffsetX";
+                var oyKey = (drag.mode === "title") ? "titleOffsetY" : "subtitleOffsetY";
+
+                var tx = (typeof s.opts[oxKey] === "number") ? s.opts[oxKey] : 0;
+                var ty = (typeof s.opts[oyKey] === "number") ? s.opts[oyKey] : 0;
+
+                // Convert drag delta to percent of output size.
+                tx += (dxOut / (s.opts.outW || 1)) * 100;
+                ty += (dyOut / (s.opts.outH || 1)) * 100;
+
+                tx = clamp(tx, -TEXT_PAN_MAX, TEXT_PAN_MAX);
+                ty = clamp(ty, -TEXT_PAN_MAX, TEXT_PAN_MAX);
+
+                s.opts[oxKey] = tx;
+                s.opts[oyKey] = ty;
+
+                if (drag.mode === "title") {
+                    if (elTitleOffsetX) elTitleOffsetX.value = String(Math.round(tx));
+                    if (elTitleOffsetY) elTitleOffsetY.value = String(Math.round(ty));
+                } else {
+                    if (elSubtitleOffsetX) elSubtitleOffsetX.value = String(Math.round(tx));
+                    if (elSubtitleOffsetY) elSubtitleOffsetY.value = String(Math.round(ty));
+                }
+
+                scheduleRender();
+                return;
+            }
+
+            var box = computeScreenBox(s.opts.outW, s.opts.outH, s.image.img, s.opts);
+            var screenW = box.screenW || s.opts.outW;
+            var screenH = box.screenH || s.opts.outH;
+            var contentW = box.contentW || s.opts.outW;
+            var contentH = box.contentH || s.opts.outH;
+            var frameKind = box.frameKind || getFrameBaseKind(s.opts.frame || "none");
+
+            var ox = (typeof s.opts.offsetX === "number") ? s.opts.offsetX : 0;
+            var oy = (typeof s.opts.offsetY === "number") ? s.opts.offsetY : 0;
+
+            // Convert drag delta to percent.
+            // If a frame is used, we move the device (use content box as reference).
+            // Otherwise we pan the screenshot (use screen box).
+            if (frameKind !== "none") {
+                ox += (dxOut / contentW) * 100;
+                oy += (dyOut / contentH) * 100;
+            } else {
+                ox += (dxOut / screenW) * 100;
+                oy += (dyOut / screenH) * 100;
+            }
+
+            ox = clamp(ox, -PAN_MAX, PAN_MAX);
+            oy = clamp(oy, -PAN_MAX, PAN_MAX);
+
+            s.opts.offsetX = ox;
+            s.opts.offsetY = oy;
+            elOffsetX.value = String(Math.round(ox));
+            elOffsetY.value = String(Math.round(oy));
+
+            scheduleRender();
+        });
+        function endDrag() {
+            if (!drag.active) return;
+            drag.active = false;
+            syncProjectJson();
+            refreshActiveMarkers();
+            updateButtons();
+        }
+        previewCanvas.addEventListener("pointerup", endDrag);
+        previewCanvas.addEventListener("pointercancel", endDrag);
+
+        elFiles.addEventListener("change", function () {
+            var files = Array.prototype.slice.call(elFiles.files || []);
+            if (!files.length) return;
+
+            Promise.all(files.map(addImageFromBlob)).then(function (loaded) {
+                loaded.forEach(function (it) { addScreenFromImage(it); });
+                if (activeIndex < 0) activeIndex = 0;
+                rebuildAllLists();
+                setActive(activeIndex);
+            }).catch(function (e) {
+                elStatus.textContent = "Failed to load one or more images. " + (e && e.message ? e.message : "");
+            });
+        });
+
+        elUseSample.addEventListener("click", function () {
+            makeSamplePngBlob().then(addImageFromBlob).then(function (it) {
+                clearAll();
+                addScreenFromImage(it);
+                activeIndex = 0;
+                rebuildAllLists();
+                setActive(0);
+            });
+        });
+
+        elClear.addEventListener("click", function () { clearAll(); });
+
+        if (elApplyAll) {
+            elApplyAll.addEventListener("click", function () {
+                commitActiveFromUi();
+                var src = getActiveScreen();
+                if (!src || !src.opts) return;
+
+                var shared = Object.assign({}, src.opts);
+                project.screens.forEach(function (s, idx) {
+                    if (!s || idx === activeIndex) return;
+                    s.opts = Object.assign({}, shared);
+                });
+
+                syncProjectJson();
+                refreshActiveMarkers();
+                updateButtons();
+                scheduleRender();
+
+                if (window.DailyTools && typeof window.DailyTools.flashButtonText === "function") {
+                    window.DailyTools.flashButtonText(elApplyAll, "Applied", 1200);
+                }
+            });
+        }
+
+        elDownloadLow.addEventListener("click", function () { exportPng(1, "app-screenshot"); });
+        elDownloadHigh.addEventListener("click", function () { exportPng(2, "app-screenshot"); });
+
+        elCopyProjectJson.addEventListener("click", function () {
+            syncProjectJson();
+            var json = window.__asgProjectJson || exportProjectJson();
+            if (window.DailyTools && typeof window.DailyTools.copyToClipboard === "function") {
+                window.DailyTools.copyToClipboard(json);
+                if (window.DailyTools.flashButtonText) window.DailyTools.flashButtonText(elCopyProjectJson, "Copied", 1200);
+                return;
+            }
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(json);
+            }
+        });
+
+        // initial
+        // Initialize platform + presets before any screen is added.
+        elPlatform.value = project.platform || "android";
+        applyPlatformUi(elPlatform.value);
+        rebuildPresetSelect(elPlatform.value);
+        updateCustomSizeVisibility();
+        updateBackgroundVisibility();
+
+        var dimsInit = getPresetDims(elPreset.value);
+        if (dimsInit && elPreset.value !== "custom") {
+            elW.value = String(dimsInit.w);
+            elH.value = String(dimsInit.h);
+        }
+
+        updateButtons();
+        syncProjectJson();
+    })();
+</script>
+

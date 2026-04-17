@@ -72,6 +72,11 @@ namespace CustomWebTools
                 defaults: new { controller = "Tools", action = "WordToNumber" });
 
             app.MapControllerRoute(
+                name: "app-screenshot-generator",
+                pattern: "app-screenshot-generator",
+                defaults: new { controller = "Tools", action = "AppScreenshotGenerator" });
+
+            app.MapControllerRoute(
                 name: "changelog",
                 pattern: "changelog",
                 defaults: new { controller = "Home", action = "Changelog" });
